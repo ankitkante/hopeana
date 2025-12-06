@@ -20,7 +20,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "core": ["packages/core/src"],
+      "db": ["packages/db/src"],
+      "utils": ["packages/utils/src"],
+      "types": ["packages/types/src"]
     }
   },
   "include": [
