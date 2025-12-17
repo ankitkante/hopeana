@@ -8,34 +8,6 @@ import {
 export default function Home() {
   return (
     <div className="bg-white">
-      <header className="w-full flex items-center justify-between p-4">
-        <div className="flex items-center gap-3">
-          <Image
-            className="dark:invert"
-            src="/globe.svg"
-            alt="Logo"
-            width={32}
-            height={32}
-          />
-          <h1 className="text-2xl font-bold leading-none text-green-500">
-            MotivationQuotes
-          </h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <a href="#" className="text-gray-700">
-            Pricing
-          </a>
-          <a href="#" className="text-gray-700">
-            Login
-          </a>
-          <a
-            href="#"
-            className="px-4 py-2 rounded-md bg-green-500 text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
-          >
-            Sign Up
-          </a>
-        </div>
-      </header>
 
       <main className="flex flex-col items-center justify-center py-32 bg-gray-100">
         <div className="bg-gray-800 rounded-3xl p-16 text-center">
@@ -148,20 +120,6 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="bg-white py-4 text-center text-gray-500 border-t border-gray-200">
-        © 2024 MotivationQuotes. All rights reserved.
-        <div className="mt-2">
-          <a href="#" className="ml-4">
-            About Us
-          </a>
-          <a href="#" className="ml-4">
-            Contact
-          </a>
-          <a href="#" className="ml-4">
-            Terms of Service
-          </a>
-        </div>
-      </footer>
     </div>
   );
 }
