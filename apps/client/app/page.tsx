@@ -1,4 +1,9 @@
-import Image from "next/image";
+import Icon from "@mdi/react";
+import {
+  mdiAccountPlus,
+  mdiTune,
+  mdiEmailFast,
+} from "@mdi/js";
 
 export default function Home() {
   return (
@@ -60,21 +65,11 @@ export default function Home() {
         <div className="container mx-auto grid grid-cols-3 gap-8">
           <div className="text-center">
             <div className="flex items-center justify-center rounded-full bg-green-100 p-4 mx-auto w-16 h-16 mb-4">
-              {/* Replace with actual icon */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-6 h-6 text-green-500"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16.5 10.5V6.75a3 3 0 00-3-3H7.5a3 3 0 00-3 3v10.5a3 3 0 003 3h10.5a3 3 0 003-3V13.5m-3 0h3m-3 0h-3"
-                />
-              </svg>
+              <Icon
+                path={mdiAccountPlus}
+                size={1}
+                className="text-green-500"
+              />
             </div>
             <h3 className="text-xl text-black font-semibold mb-2">1. Sign Up</h3>
             <p className="text-gray-600">
@@ -83,21 +78,12 @@ export default function Home() {
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center rounded-full bg-green-100 p-4 mx-auto w-16 h-16 mb-4">
-              {/* Replace with actual icon */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-6 h-6 text-green-500"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"
-                />
-              </svg>
+              <Icon
+                path={mdiTune}
+                size={1}
+                className="text-green-500"
+              />
+
             </div>
             <h3 className="text-xl text-black font-semibold mb-2">2. Customize</h3>
             <p className="text-gray-600">
@@ -106,21 +92,12 @@ export default function Home() {
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center rounded-full bg-green-100 p-4 mx-auto w-16 h-16 mb-4">
-              {/* Replace with actual icon */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-6 h-6 text-green-500"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zm0 0c0 1.657 1.007 3 2.25 3S21 13.657 21 12c0-1.657-1.007-3-2.25-3S16.5 10.343 16.5 12zm-9 0a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zm0 0c0 1.657 1.007 3 2.25 3S7.5 13.657 7.5 12c0-1.657-1.007-3-2.25-3S1.5 10.343 1.5 12zm9 0a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0z"
-                />
-              </svg>
+              <Icon
+                path={mdiEmailFast}
+                size={1}
+                className="text-green-500"
+              />
+
             </div>
             <h3 className="text-xl text-black font-semibold mb-2">3. Receive</h3>
             <p className="text-gray-600">
@@ -141,8 +118,8 @@ export default function Home() {
         <div className="container mx-auto grid grid-cols-2 gap-8">
           <div className="bg-white rounded-lg p-8 shadow-md">
             <p className="text-gray-800 italic mb-4">
-              "The only way to do great work is to love what you do. If you
-              haven't found it yet, keep looking. Don't settle."
+              &quot;The only way to do great work is to love what you do. If you
+              haven&apos;t found it yet, keep looking. Don&apos;t settle.&quot;
             </p>
             <p className="text-gray-500 text-sm text-right">- Steve Jobs</p>
           </div>
