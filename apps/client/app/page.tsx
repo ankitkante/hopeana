@@ -10,13 +10,18 @@ export default function Home() {
     <div className="bg-white">
 
       <main className="flex flex-col items-center justify-center py-32 bg-gray-100">
-        <div className="bg-gray-800 rounded-3xl p-16 text-center">
+        <div className="rounded-3xl p-16 text-center
+            bg-gradient-to-br
+            from-[#2c2f33]
+            via-[#3a4a3f]
+            to-[#1f3d2b]"
+          >
           <h2 className="text-5xl font-bold leading-tight text-white mb-8">
             Start Your Day with a Dose of Inspiration
           </h2>
           <p className="text-lg leading-6 text-gray-300 mb-12">
-            Schedule personalized motivational quotes delivered directly to
-            your email or social media. Never miss a chance to be inspired.
+            Schedule motivational quotes delivered directly to
+            your inbox. Never miss a chance to be inspired.
           </p>
           <a
             href="#"
@@ -25,7 +30,7 @@ export default function Home() {
             Start Your Journey
           </a>
         </div>
-        <p className="mt-4 text-gray-500">Join 10,000+ happy subscribers</p>
+        {/* <p className="mt-4 text-gray-500">Join 10,000+ happy subscribers</p> */}
       </main>
 
       <section className="py-16">
@@ -80,7 +85,7 @@ export default function Home() {
       </section>
 
       <section className="py-16 bg-gray-100">
-        <h2 className="text-3xl font-bold text-center mb-8">
+        <h2 className="text-3xl text-black font-bold text-center mb-8">
           Words That Inspire
         </h2>
         <p className="text-lg text-center text-gray-700 mb-16">
