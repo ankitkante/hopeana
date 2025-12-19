@@ -18,8 +18,8 @@ export default function Header() {
     };
 
     return (
-        <header className="w-full bg-white relative">
-            <div className="flex items-center justify-between p-4">
+        <header className="w-full bg-white dark:bg-gray-900 relative border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
                 <Link href="/" className="flex items-center gap-3">
                     <Image
                         className="dark:invert"
@@ -28,17 +28,17 @@ export default function Header() {
                         width={32}
                         height={32}
                     />
-                    <h1 className="text-2xl font-bold leading-none text-green-500">
-                        Hopeana
+                    <h1 className="text-xl sm:text-2xl font-bold leading-none text-green-500">
+                        MotivationQuotes
                     </h1>
                 </Link>
 
                 {/* Desktop Navigation */}
                 <div className="hidden md:flex items-center gap-4">
-                    <Link href="/pricing" className="text-gray-700">
+                    <Link href="/pricing" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
                         Pricing
                     </Link>
-                    <Link href="/login" className="text-gray-700">
+                    <Link href="/login" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
                         Login
                     </Link>
                     <Link
@@ -51,7 +51,7 @@ export default function Header() {
 
                 {/* Mobile Hamburger Button */}
                 <button
-                    className="md:hidden p-2 text-gray-700"
+                    className="md:hidden p-2 text-gray-700 dark:text-gray-300"
                     onClick={toggleMenu}
                     aria-label={isMenuOpen ? "Close menu" : "Open menu"}
                     aria-expanded={isMenuOpen}
@@ -62,18 +62,18 @@ export default function Header() {
 
             {/* Mobile Navigation Menu */}
             {isMenuOpen && (
-                <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+                <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
                     <nav className="flex flex-col p-4 gap-4">
                         <Link
                             href="/pricing"
-                            className="text-gray-700 py-2"
+                            className="text-gray-700 dark:text-gray-300 py-2 hover:text-gray-900 dark:hover:text-white transition"
                             onClick={closeMenu}
                         >
                             Pricing
                         </Link>
                         <Link
                             href="/login"
-                            className="text-gray-700 py-2"
+                            className="text-gray-700 dark:text-gray-300 py-2 hover:text-gray-900 dark:hover:text-white transition"
                             onClick={closeMenu}
                         >
                             Login
