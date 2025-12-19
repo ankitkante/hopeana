@@ -29,7 +29,7 @@ export default function Header() {
                         height={32}
                     />
                     <h1 className="text-xl sm:text-2xl font-bold leading-none text-green-500">
-                        MotivationQuotes
+                        Hopeana
                     </h1>
                 </Link>
 

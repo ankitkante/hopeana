@@ -35,9 +35,9 @@ export default function Home() {
             Start Your Journey
           </a>
         </div>
-        <p className="mt-6 text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+        {/* <p className="mt-6 text-gray-500 dark:text-gray-400 text-sm sm:text-base">
           Join 10,000+ happy subscribers
-        </p>
+        </p> */}
       </main>
 
       {/* How It Works Section */}
@@ -73,7 +73,7 @@ export default function Home() {
               2. Customize
             </h3>
             <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
-              Choose your topics, frequency, and delivery method.
+              Choose your frequency and delivery method.
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-600 sm:col-span-2 md:col-span-1 sm:max-w-sm sm:mx-auto md:max-w-none">
