@@ -19,7 +19,7 @@ export default function Header() {
 
     return (
         <header className="w-full bg-white dark:bg-gray-900 relative border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
+            <div className="flex items-center justify-between p-4">
                 <Link href="/" className="flex items-center gap-3">
                     <Image
                         className="dark:invert"
