@@ -1,9 +1,10 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Header() {
     return (
         <header className="w-full flex items-center justify-between p-4 bg-white">
-            <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3">
                 <Image
                     className="dark:invert"
                     src="/globe.svg"
@@ -14,20 +15,20 @@ export default function Header() {
                 <h1 className="text-2xl font-bold leading-none text-green-500">
                     Hopeana
                 </h1>
-            </div>
+            </Link>
             <div className="flex items-center gap-4">
-                <a href="#" className="text-gray-700">
+                <Link href="/pricing" className="text-gray-700">
                     Pricing
-                </a>
-                <a href="#" className="text-gray-700">
+                </Link>
+                <Link href="/login" className="text-gray-700">
                     Login
-                </a>
-                <a
-                    href="#"
+                </Link>
+                <Link
+                    href="/signup"
                     className="px-4 py-2 rounded-md bg-green-500 text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
                 >
                     Sign Up
-                </a>
+                </Link>
             </div>
         </header>
     )
