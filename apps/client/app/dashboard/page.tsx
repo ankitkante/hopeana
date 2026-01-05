@@ -113,7 +113,7 @@ function FeatureItem({
 
 export default function DashboardPage() {
   // Simulated user state - in production this would come from auth context
-  const [userPlan] = useState<UserPlan>("free");
+  const [userPlan, setUserPlan] = useState<UserPlan>("free");
 
   // Simulated stats - in production this would come from API
   const stats: UserStats = {
@@ -128,6 +128,37 @@ export default function DashboardPage() {
   return (
     <div className="bg-gray-100 dark:bg-gray-900 min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        {/* Temporary Plan Toggle for Testing */}
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <span className="text-yellow-800 dark:text-yellow-200 text-sm font-medium">
+              [DEV] Toggle Plan View:
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setUserPlan("free")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${
+                  userPlan === "free"
+                    ? "bg-gray-800 text-white dark:bg-white dark:text-gray-800"
+                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
+              >
+                Free
+              </button>
+              <button
+                onClick={() => setUserPlan("premium")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${
+                  userPlan === "premium"
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                }`}
+              >
+                Premium
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
