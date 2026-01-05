@@ -38,6 +38,9 @@ export default function Header() {
                     <Link href="/pricing" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
                         Pricing
                     </Link>
+                    <Link href="/dashboard" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
+                        Dashboard
+                    </Link>
                     <Link href="/login" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
                         Login
                     </Link>
@@ -70,6 +73,13 @@ export default function Header() {
                             onClick={closeMenu}
                         >
                             Pricing
+                        </Link>
+                        <Link
+                            href="/dashboard"
+                            className="text-gray-700 dark:text-gray-300 py-2 hover:text-gray-900 dark:hover:text-white transition"
+                            onClick={closeMenu}
+                        >
+                            Dashboard
                         </Link>
                         <Link
                             href="/login"
