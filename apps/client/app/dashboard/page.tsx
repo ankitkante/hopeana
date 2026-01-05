@@ -12,6 +12,8 @@ import {
   mdiStar,
   mdiCrown,
   mdiCheck,
+  mdiClockOutline,
+  mdiCheckCircle,
 } from "@mdi/js";
 
 type UserPlan = "free" | "premium";
@@ -21,6 +23,18 @@ interface UserStats {
   messagesLimit: number;
   nextDelivery: string;
   deliveryMethod: string;
+}
+
+type MessageTab = "upcoming" | "sent";
+
+interface Message {
+  id: string;
+  quote: string;
+  author: string;
+  scheduledAt?: string;
+  sentAt?: string;
+  deliveryMethod: string;
+  status: "scheduled" | "sent" | "delivered";
 }
 
 function UpgradeBanner() {
@@ -111,9 +125,95 @@ function FeatureItem({
   );
 }
 
+function MessagesTable({
+  messages,
+  type,
+}: {
+  messages: Message[];
+  type: "upcoming" | "sent";
+}) {
+  if (messages.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        <Icon
+          path={type === "upcoming" ? mdiClockOutline : mdiCheckCircle}
+          size={2}
+          className="mx-auto mb-3 opacity-50"
+        />
+        <p>No {type} messages yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-700">
+            <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+              Quote
+            </th>
+            <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+              Author
+            </th>
+            <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+              {type === "upcoming" ? "Scheduled For" : "Sent At"}
+            </th>
+            <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+              Delivery
+            </th>
+            <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {messages.map((message) => (
+            <tr
+              key={message.id}
+              className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+            >
+              <td className="py-3 px-4 text-sm text-gray-900 dark:text-white max-w-xs truncate">
+                &quot;{message.quote}&quot;
+              </td>
+              <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                {message.author}
+              </td>
+              <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                {type === "upcoming" ? message.scheduledAt : message.sentAt}
+              </td>
+              <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                {message.deliveryMethod}
+              </td>
+              <td className="py-3 px-4">
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                    message.status === "scheduled"
+                      ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
+                      : message.status === "sent"
+                      ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                      : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                  }`}
+                >
+                  <Icon
+                    path={message.status === "scheduled" ? mdiClockOutline : mdiCheckCircle}
+                    size={0.5}
+                  />
+                  {message.status.charAt(0).toUpperCase() + message.status.slice(1)}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   // Simulated user state - in production this would come from auth context
   const [userPlan, setUserPlan] = useState<UserPlan>("free");
+  const [activeTab, setActiveTab] = useState<MessageTab>("upcoming");
 
   // Simulated stats - in production this would come from API
   const stats: UserStats = {
@@ -124,6 +224,131 @@ export default function DashboardPage() {
   };
 
   const usagePercentage = (stats.messagesUsed / stats.messagesLimit) * 100;
+
+  // Simulated messages - in production this would come from API
+  const upcomingMessages: Message[] = userPlan === "free"
+    ? [
+        {
+          id: "1",
+          quote: "The only way to do great work is to love what you do.",
+          author: "Steve Jobs",
+          scheduledAt: "Tomorrow, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "scheduled",
+        },
+        {
+          id: "2",
+          quote: "In the middle of difficulty lies opportunity.",
+          author: "Albert Einstein",
+          scheduledAt: "Jan 7, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "scheduled",
+        },
+      ]
+    : [
+        {
+          id: "1",
+          quote: "The only way to do great work is to love what you do.",
+          author: "Steve Jobs",
+          scheduledAt: "Tomorrow, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "scheduled",
+        },
+        {
+          id: "2",
+          quote: "In the middle of difficulty lies opportunity.",
+          author: "Albert Einstein",
+          scheduledAt: "Tomorrow, 12:00 PM",
+          deliveryMethod: "Twitter",
+          status: "scheduled",
+        },
+        {
+          id: "3",
+          quote: "Success is not final, failure is not fatal.",
+          author: "Winston Churchill",
+          scheduledAt: "Jan 7, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "scheduled",
+        },
+        {
+          id: "4",
+          quote: "Believe you can and you're halfway there.",
+          author: "Theodore Roosevelt",
+          scheduledAt: "Jan 7, 6:00 PM",
+          deliveryMethod: "Twitter",
+          status: "scheduled",
+        },
+      ];
+
+  const sentMessages: Message[] = userPlan === "free"
+    ? [
+        {
+          id: "s1",
+          quote: "The future belongs to those who believe in the beauty of their dreams.",
+          author: "Eleanor Roosevelt",
+          sentAt: "Today, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "delivered",
+        },
+        {
+          id: "s2",
+          quote: "It is during our darkest moments that we must focus to see the light.",
+          author: "Aristotle",
+          sentAt: "Yesterday, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "delivered",
+        },
+        {
+          id: "s3",
+          quote: "The only impossible journey is the one you never begin.",
+          author: "Tony Robbins",
+          sentAt: "Jan 3, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "delivered",
+        },
+      ]
+    : [
+        {
+          id: "s1",
+          quote: "The future belongs to those who believe in the beauty of their dreams.",
+          author: "Eleanor Roosevelt",
+          sentAt: "Today, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "delivered",
+        },
+        {
+          id: "s2",
+          quote: "Start where you are. Use what you have. Do what you can.",
+          author: "Arthur Ashe",
+          sentAt: "Today, 12:00 PM",
+          deliveryMethod: "Twitter",
+          status: "delivered",
+        },
+        {
+          id: "s3",
+          quote: "It is during our darkest moments that we must focus to see the light.",
+          author: "Aristotle",
+          sentAt: "Yesterday, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "delivered",
+        },
+        {
+          id: "s4",
+          quote: "Everything you've ever wanted is on the other side of fear.",
+          author: "George Addair",
+          sentAt: "Yesterday, 6:00 PM",
+          deliveryMethod: "Twitter",
+          status: "delivered",
+        },
+        {
+          id: "s5",
+          quote: "The only impossible journey is the one you never begin.",
+          author: "Tony Robbins",
+          sentAt: "Jan 3, 8:00 AM",
+          deliveryMethod: "Email",
+          status: "delivered",
+        },
+      ];
 
   return (
     <div className="bg-gray-100 dark:bg-gray-900 min-h-screen">
@@ -294,6 +519,66 @@ export default function DashboardPage() {
                 >
                   Upgrade to Premium
                 </Link>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Messages Tabs */}
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Your Messages
+          </h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setActiveTab("upcoming")}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition ${
+                  activeTab === "upcoming"
+                    ? "text-green-600 dark:text-green-400 border-b-2 border-green-500 bg-green-50 dark:bg-green-900/20"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Icon path={mdiClockOutline} size={0.8} />
+                  Upcoming Messages
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                    activeTab === "upcoming"
+                      ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                  }`}>
+                    {upcomingMessages.length}
+                  </span>
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab("sent")}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition ${
+                  activeTab === "sent"
+                    ? "text-green-600 dark:text-green-400 border-b-2 border-green-500 bg-green-50 dark:bg-green-900/20"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Icon path={mdiCheckCircle} size={0.8} />
+                  Sent Messages
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                    activeTab === "sent"
+                      ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                  }`}>
+                    {sentMessages.length}
+                  </span>
+                </span>
+              </button>
+            </div>
+            {/* Tab Content */}
+            <div className="p-4">
+              {activeTab === "upcoming" ? (
+                <MessagesTable messages={upcomingMessages} type="upcoming" />
+              ) : (
+                <MessagesTable messages={sentMessages} type="sent" />
               )}
             </div>
           </div>
