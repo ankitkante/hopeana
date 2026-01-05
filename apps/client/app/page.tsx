@@ -55,7 +55,7 @@ export default function Home() {
               <Icon
                 path={mdiAccountPlus}
                 size={1.5}
-                className="text-green-500"
+                className="text-primary"
               />
             </div>
             <h3 className="text-lg sm:text-xl text-gray-900 dark:text-white font-semibold mb-2">
@@ -67,7 +67,7 @@ export default function Home() {
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-center mx-auto w-12 h-12 mb-4">
-              <Icon path={mdiTune} size={1.5} className="text-green-500" />
+              <Icon path={mdiTune} size={1.5} className="text-primary" />
             </div>
             <h3 className="text-lg sm:text-xl text-gray-900 dark:text-white font-semibold mb-2">
               2. Customize
@@ -81,7 +81,7 @@ export default function Home() {
               <Icon
                 path={mdiEmailCheckOutline}
                 size={1.5}
-                className="text-green-500"
+                className="text-primary"
               />
             </div>
             <h3 className="text-lg sm:text-xl text-gray-900 dark:text-white font-semibold mb-2">
@@ -106,7 +106,7 @@ export default function Home() {
         <div className="container mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-3">
-              <Icon path={mdiBrain} size={1} className="text-green-500" />
+              <Icon path={mdiBrain} size={1} className="text-primary" />
               <h3 className="text-lg sm:text-xl text-gray-900 dark:text-white font-semibold">
                 Mental Resilience
               </h3>
@@ -118,7 +118,7 @@ export default function Home() {
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-3">
-              <Icon path={mdiLightningBolt} size={1} className="text-green-500" />
+              <Icon path={mdiLightningBolt} size={1} className="text-primary" />
               <h3 className="text-lg sm:text-xl text-gray-900 dark:text-white font-semibold">
                 Productivity Boost
               </h3>
@@ -130,7 +130,7 @@ export default function Home() {
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-3">
-              <Icon path={mdiEmoticonHappyOutline} size={1} className="text-green-500" />
+              <Icon path={mdiEmoticonHappyOutline} size={1} className="text-primary" />
               <h3 className="text-lg sm:text-xl text-gray-900 dark:text-white font-semibold">
                 Emotional Well-being
               </h3>
@@ -142,7 +142,7 @@ export default function Home() {
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-3">
-              <Icon path={mdiFlagVariant} size={1} className="text-green-500" />
+              <Icon path={mdiFlagVariant} size={1} className="text-primary" />
               <h3 className="text-lg sm:text-xl text-gray-900 dark:text-white font-semibold">
                 Goal Achievement
               </h3>

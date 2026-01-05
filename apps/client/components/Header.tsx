@@ -28,7 +28,7 @@ export default function Header() {
                         width={32}
                         height={32}
                     />
-                    <h1 className="text-xl sm:text-2xl font-bold leading-none text-green-500">
+                    <h1 className="text-xl sm:text-2xl font-bold leading-none text-primary">
                         Hopeana
                     </h1>
                 </Link>
@@ -46,7 +46,7 @@ export default function Header() {
                     </Link>
                     <Link
                         href="/signup"
-                        className="px-4 py-2 rounded-md bg-green-500 text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
+                        className="px-4 py-2 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
                     >
                         Sign Up
                     </Link>
@@ -90,7 +90,7 @@ export default function Header() {
                         </Link>
                         <Link
                             href="/signup"
-                            className="px-4 py-2 rounded-md bg-green-500 text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out text-center"
+                            className="px-4 py-2 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out text-center"
                             onClick={closeMenu}
                         >
                             Sign Up
