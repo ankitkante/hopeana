@@ -8,6 +8,7 @@ import {
   mdiEmoticonHappyOutline,
   mdiFlagVariant,
 } from "@mdi/js";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -28,12 +29,12 @@ export default function Home() {
             Schedule personalized motivational quotes delivered directly to your email or
             social media. Never miss a chance to be inspired.
           </p>
-          <a
-            href="#"
-            className="inline-block px-6 py-3 sm:px-8 sm:py-3 rounded-md bg-green-500 text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
+          <Link
+            href="/onboarding/communication-channels"
+            className="inline-block px-6 py-3 sm:px-8 sm:py-3 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
           >
             Start Your Journey
-          </a>
+          </Link>
         </div>
         {/* <p className="mt-6 text-gray-500 dark:text-gray-400 text-sm sm:text-base">
           Join 10,000+ happy subscribers
