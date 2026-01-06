@@ -4,6 +4,7 @@
 
 @theme inline {
   --font-sans: var(--font-manrope);
+  --color-primary: var(--primary);
 }
 
 body {
