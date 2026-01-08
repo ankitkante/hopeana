@@ -1,10 +1,11 @@
 "use client"
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import Icon from "@mdi/react";
 import {
     mdiEmailOutline,
     mdiMessageTextOutline,
 } from "@mdi/js";
+import { OnboardingContext } from "../onboarding-context";
 
 export default function ChannelCard({
     options,
@@ -19,6 +20,8 @@ export default function ChannelCard({
     }>;
     defaultSelection?: string;
 }) {
+    const {onboardingData, setOnboardingData} = useContext(OnboardingContext);
+
     const [selectedChannel, setSelectedChannel] = useState<string | null>(
         defaultSelection || null
     );
@@ -29,8 +32,10 @@ export default function ChannelCard({
     };
 
     const handleClick = (clickedChannel: string) => {
-        console.log("Selected channel:", clickedChannel);
-        setSelectedChannel(clickedChannel);
+        setSelectedChannel(clickedChannel)
+        setOnboardingData((prev) => {
+            return { ...prev, communicationChannel: clickedChannel }
+        })
     };
 
     return (
