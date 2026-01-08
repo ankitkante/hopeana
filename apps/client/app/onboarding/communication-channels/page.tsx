@@ -41,14 +41,10 @@ export default function SelectCommunicationChannel() {
                         Receive your daily inspiration
                     </h1>
                 </div>
-                <div className="mt-10 space-y-6">
-                    <div className="space-y-4">
-                        <ChannelSelector
-                            options={channelOptions}
-                            defaultSelection="email"
-                        ></ChannelSelector>
-                    </div>
-                </div>
+                <ChannelSelector
+                    options={channelOptions}
+                    defaultSelection="email"
+                ></ChannelSelector>
             </main>
         </div>
     )
