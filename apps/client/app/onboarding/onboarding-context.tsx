@@ -1,8 +1,20 @@
 "use client"
 
-import {createContext, useState } from 'react'
+import {createContext, useState, Dispatch, SetStateAction } from 'react'
 
-export const OnboardingContext = createContext(null)
+interface OnboardingData {
+    channel?: string | null;
+    data?: {
+        email?: string;
+    };
+}
+
+interface OnboardingContextType {
+    onboardingData: OnboardingData;
+    setOnboardingData: Dispatch<SetStateAction<OnboardingData>>;
+}
+
+export const OnboardingContext = createContext<OnboardingContextType | null>(null)
 
 export function OnboardingProvider({
     children,
@@ -10,7 +22,7 @@ export function OnboardingProvider({
     children: React.ReactNode
 }) {
 
-    const [onboardingData, setOnboardingData] = useState({})
+    const [onboardingData, setOnboardingData] = useState<OnboardingData>({})
 
     return (
         <OnboardingContext value={{ onboardingData, setOnboardingData }}>

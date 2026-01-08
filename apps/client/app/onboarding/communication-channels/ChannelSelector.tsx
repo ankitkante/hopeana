@@ -42,7 +42,7 @@ export default function ChannelCard({
         setSelectedChannel(clickedChannel)
     };
 
-    const onEmailInput = (e) => {
+    const onEmailInput = (e: React.FormEvent<HTMLInputElement>) => {
         setEmail(e.currentTarget.value);
     }
 
