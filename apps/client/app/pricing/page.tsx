@@ -42,7 +42,7 @@ function FAQAccordion({ items }: { items: FAQItem[] }) {
                         <Icon
                             path={openIndex === index ? mdiChevronUp : mdiChevronDown}
                             size={1}
-                            className="text-green-500"
+                            className="text-primary"
                         />
                     </button>
                     {openIndex === index && (
@@ -59,7 +59,7 @@ function FAQAccordion({ items }: { items: FAQItem[] }) {
 function CheckItem({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-            <Icon path={mdiCheck} size={0.8} className="text-green-500" />
+            <Icon path={mdiCheck} size={0.8} className="text-primary" />
             <span>{children}</span>
         </div>
     );
@@ -92,7 +92,7 @@ export default function PricingPage() {
                         <div className="mb-2">
                             <span className="text-4xl font-bold text-gray-900 dark:text-white">Free</span>
                         </div>
-                        <p className="text-green-600 dark:text-green-500 text-sm mb-6">No credit card required</p>
+                        <p className="text-green-600 dark:text-primary text-sm mb-6">No credit card required</p>
                         <button className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition ease-in-out mb-8">
                             Try for Free
                         </button>
@@ -104,7 +104,7 @@ export default function PricingPage() {
                     </div>
 
                     {/* Premium Plan */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border-2 border-green-500 shadow-sm relative">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border-2 border-primary shadow-sm relative">
                         <div className="absolute top-4 right-4">
                             <span className="px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-semibold rounded-full border border-green-200 dark:border-green-700">
                                 Best Value
@@ -116,7 +116,7 @@ export default function PricingPage() {
                             <span className="text-gray-500 dark:text-gray-400 ml-1">/ month</span>
                         </div>
                         <p className="text-transparent text-sm mb-6">.</p>
-                        <button className="w-full py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition ease-in-out mb-8">
+                        <button className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-green-600 transition ease-in-out mb-8">
                             Subscribe Now
                         </button>
                         <div className="space-y-4">

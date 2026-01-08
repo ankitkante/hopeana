@@ -3,18 +3,21 @@
 :root {
   --background: #f3f4f6;
   --foreground: #171717;
+  --primary: var(--color-green-500);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-manrope);
+  --color-primary: var(--primary);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #111827;
     --foreground: #ededed;
+    --primary: var(--color-green-500);
   }
 }
 
@@ -22,4 +25,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-manrope), sans-serif;
+}
+
+/* Selected channel card styles */
+.channel-card.selected {
+  border-color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 12.5%, transparent);
+}
+.channel-card.selected .channel-icon {
+  color: var(--primary);
 }
