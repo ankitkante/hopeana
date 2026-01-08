@@ -26,3 +26,12 @@ body {
   color: var(--foreground);
   font-family: var(--font-manrope), sans-serif;
 }
+
+/* Selected channel card styles */
+.channel-card.selected {
+  border-color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 12.5%, transparent);
+}
+.channel-card.selected .channel-icon {
+  color: var(--primary);
+}
