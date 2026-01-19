@@ -9,7 +9,7 @@ import {
 } from "@mdi/js";
 import { OnboardingContext } from "../onboarding-context";
 
-export default function ChannelCard({
+export default function ChannelSelector({
     options,
     defaultSelection,
 }: {
@@ -24,7 +24,7 @@ export default function ChannelCard({
 }) {
     const ctx = useContext(OnboardingContext);
     if (!ctx) throw new Error("OnboardingContext missing");
-    const { onboardingData, setOnboardingData } = ctx;
+    const { setOnboardingData } = ctx;
 
     const router = useRouter();
 
@@ -48,12 +48,15 @@ export default function ChannelCard({
 
     const onChannelSave = () => {
         setOnboardingData((prev) => {
-            return { 
-                ...prev, 
-                channel: selectedChannel,
-                data: {
-                    email: email
+            return {
+                ...prev,
+                channelData: {
+                    selectedChannel,
+                    data: {
+                        email: email
+                    }
                 }
+
             }
         })
 
@@ -65,7 +68,7 @@ export default function ChannelCard({
             <div className="mt-10 space-y-6">
                 <div className="space-y-4">
                     {options.map(({ label, value, subtitle, icon, input }) => {
-                        const path = (iconMap as any)[icon] ?? icon;
+                        const path = (iconMap as Record<string, string>)[icon] ?? icon;
                         return (
                             <div
                                 className={`channel-card flex cursor-pointer items-start gap-4 rounded-xl border border-solid border-gray-200 dark:border-gray-700 p-4 mt-10 transition-all duration-200 hover:border-primary/50 dark:hover:border-primary/50 ${selectedChannel === value ? "selected" : ""
