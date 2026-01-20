@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, type User, type Schedule } from "../../../../../packages/db/src";
+import { prisma, type User, type Schedule, Prisma } from "../../../../../packages/db/src";
 
 // POST /api/onboarding - Create a new user with their initial schedule
 export async function POST(request: NextRequest) {
@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const { channelData, frequencyData } = body;
 
     // Create user and schedule in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Check if user already exists
       const {data: { email }} = channelData;
       const { selectedChannel: channel } = channelData;
