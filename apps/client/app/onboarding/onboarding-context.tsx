@@ -12,7 +12,7 @@ interface OnboardingData {
     frequencyData?: {
        selectedSchedule: string | null;
        timeOfDay?: string | null;
-       interval?: string | null;
+       interval?: { value: string | null; unit: string | null } | null;
        days?: string[] | null;
     };
 }

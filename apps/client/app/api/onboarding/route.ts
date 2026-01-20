@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, type User, type Schedule } from "db";
+import { prisma, type User, type Schedule } from "../../../../../packages/db/src";
 
 // POST /api/onboarding - Create a new user with their initial schedule
 export async function POST(request: NextRequest) {
