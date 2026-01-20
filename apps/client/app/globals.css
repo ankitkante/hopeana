@@ -27,7 +27,7 @@ body {
   font-family: var(--font-manrope), sans-serif;
 }
 
-/* Selected channel card styles */
+/* Selected channel card styles. Used in first step of user onboarding flow */
 .channel-card.selected {
   border-color: var(--primary);
   background-color: color-mix(in srgb, var(--primary) 12.5%, transparent);
@@ -35,3 +35,13 @@ body {
 .channel-card.selected .channel-icon {
   color: var(--primary);
 }
+
+/* Selected radio */
+.radio-card.selected {
+  border-color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 12.5%, transparent);
+}
+.radio-card.selected .radio-icon {
+  color: var(--primary);
+}
+
