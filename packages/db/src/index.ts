@@ -17,6 +17,3 @@ if (process.env.NODE_ENV !== "production") {
 // Re-export Prisma client and types
 export { PrismaClient, Prisma };
 export type { User, Schedule, SentMessage, QuotesBank };
-
-// Backward compatibility export
-export const dbReady = true;
