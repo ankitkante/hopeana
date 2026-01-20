@@ -1,40 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, type User, type Schedule } from "../../../../../packages/db/src";
+import { prisma, type User, type Schedule } from "db";
 
 // POST /api/onboarding - Create a new user with their initial schedule
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, channel, frequency, timeOfDay, timezone } = body;
-
-    // Validate required fields
-    if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!channel) {
-      return NextResponse.json(
-        { error: "Communication channel is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!frequency) {
-      return NextResponse.json(
-        { error: "Message frequency is required" },
-        { status: 400 }
-      );
-    }
+    const { channelData, frequencyData } = body;
 
     // Create user and schedule in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Check if user already exists
+      const {data: { email }} = channelData;
+      const { selectedChannel: channel } = channelData;
+      const { selectedSchedule: frequency, timeOfDay, timezone } = frequencyData;
+      const name = body.name || null;
+
       let user: User | null = await tx.user.findUnique({
         where: { email },
       });
+
+      console.log("Onboarding - user found:", user);
 
       if (user) {
         // Update existing user
@@ -56,31 +41,29 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create a new schedule for the user
-      const schedule: Schedule = await tx.schedule.create({
-        data: {
-          userId: user.id,
-          channel,
-          frequency,
-          timeOfDay: timeOfDay || "09:00",
-          timezone: timezone || "UTC",
-          isActive: true,
-        },
-      });
+      // // Create a new schedule for the user
+      // const schedule: Schedule = await tx.schedule.create({
+      //   data: {
+      //     userId: user.id,
+      //     channel,
+      //     frequency,
+      //     timeOfDay: timeOfDay || "09:00",
+      //     timezone: timezone || "UTC",
+      //     isActive: true,
+      //   },
+      // });
 
-      return { user, schedule };
+      // return { user, schedule };
+      return {user}
     });
 
     return NextResponse.json({
       success: true,
-      message: "User onboarded successfully",
       data: {
         userId: result.user.id,
         email: result.user.email,
-        scheduleId: result.schedule.id,
-        channel: result.schedule.channel,
-        frequency: result.schedule.frequency,
-      },
+      }
+      
     });
   } catch (error) {
     console.error("Onboarding error:", error);
