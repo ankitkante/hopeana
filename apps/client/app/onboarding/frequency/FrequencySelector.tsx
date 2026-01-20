@@ -11,7 +11,7 @@ import {
     mdiRepeat,
 } from "@mdi/js";
 import Icon from "@mdi/react";
-import React, { useState, useContext, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useContext, useCallback, useEffect } from "react";
 import { OnboardingContext } from "../onboarding-context";
 
 function CardRadio({ icon, value, label, subtitle, isSelected, onClick }: { icon: string; label: string; subtitle: string, value: string; isSelected: boolean; onClick: () => void }) {
@@ -29,16 +29,16 @@ function CardRadio({ icon, value, label, subtitle, isSelected, onClick }: { icon
     )
 }
 
-function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label: 'Weeks', value: 'weeks' }], onIntervalChange }: { unitList?: [] }) {
+function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label: 'Weeks', value: 'weeks' }], onIntervalChange }: { unitList?: { label: string; value: string }[]; onIntervalChange: (obj: { value: string | null, unit: string | null }) => void }) {
     const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
-    const [selectedValue, setSelectedValue] = useState<number | null>(null);
+    const [selectedValue, setSelectedValue] = useState<string | null>("1");
 
-    const onUnitSelect = (value: string) => {
-        setSelectedUnit(value);
+    const onUnitSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedUnit(event.target.value);
     }
 
-    const onValueInput = (value: number) => {
-        setSelectedValue(value);
+    const onValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSelectedValue(event.target.value);
     }
 
     useEffect(() => {
@@ -53,17 +53,18 @@ function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label:
                 <div className="relative">
                     <input
                         className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 font-bold text-gray-900 focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                        min="1" type="number" value="1" onInput={onValueInput} />
+                        min="1" type="number" value={selectedValue || ""} onChange={onValueChange} />
                 </div>
             </div>
             <div className="flex-1">
                 <label className="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-400">Frequency
                     Unit</label>
                 <select
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 font-bold text-gray-900 focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 font-bold text-gray-900 focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    onChange={onUnitSelect}>
                     {unitList.map(({ label, value }) => {
                         return (
-                            <option key={value} value={value} onSelect={onUnitSelect}>{label}</option>
+                            <option key={value} value={value}>{label}</option>
                         )
                     })}
 
@@ -117,7 +118,7 @@ function DayPicker({ onDaysSelect }: { onDaysSelect?: (days: string[]) => void }
     );
 }
 
-function SectionCard({ icon, label, grid, children }: { icon: string; title: string; grid: number; children: React.ReactNode }) {
+function SectionCard({ icon, label, grid=1, children }: { label: string, icon: string; grid?: string | number; children: React.ReactNode }) {
     return (
         <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
             <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -138,7 +139,7 @@ export default function FrequencySelector() {
 
     const [selectedSchedule, setSelectedSchedule] = useState<string | null>('specific_days');
     const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<string | null>(null);
-    const [selectedInterval, setSelectedInterval] = useState<{ value: number | null, unit: string | null }>({ value: null, unit: null });
+    const [selectedInterval, setSelectedInterval] = useState<{ value: string | null, unit: string | null }>({ value: null, unit: null });
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
     const onScheduleSelect = useCallback((value: string) => {
@@ -149,7 +150,7 @@ export default function FrequencySelector() {
         setSelectedTimeOfDay(value);
     }, [])
 
-    const onIntervalChange = useCallback((obj: { value: number | null, unit: string | null }) => {
+    const onIntervalChange = useCallback((obj: { value: string | null, unit: string | null }) => {
         setSelectedInterval(obj)
     }, [])
 

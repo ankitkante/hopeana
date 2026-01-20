@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User model - stores user info like email and other social login details
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+
+  // Social login fields
+  provider      String?   // e.g., "google", "github", "email"
+  providerId    String?   // ID from the social provider
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  schedules     Schedule[]
+  sentMessages  SentMessage[]
+
+  @@index([email])
+  @@index([provider, providerId])
+}
+
+// Schedule model - each user can create multiple schedules for receiving messages
+model Schedule {
+  id          String    @id @default(cuid())
+  userId      String
+
+  // Schedule configuration
+  channel     String    // e.g., "email", "sms", "push"
+  frequency   String    // e.g., "daily", "weekly", "monthly"
+  timeOfDay   String?   // preferred time to receive messages (e.g., "09:00")
+  timezone    String?   // user's timezone for scheduling
+  dayOfWeek   Int?      // 0-6 for weekly schedules (0 = Sunday)
+  isActive    Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sentMessages SentMessage[]
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+// SentMessage model - tracks messages sent by the server
+model SentMessage {
+  id          String    @id @default(cuid())
+  userId      String
+  scheduleId  String
+  quoteId     String
+
+  // Message tracking
+  sentAt      DateTime  @default(now())
+  channel     String    // channel through which the message was sent
+  status      String    @default("sent") // "sent", "delivered", "failed"
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedule    Schedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  quote       QuotesBank @relation(fields: [quoteId], references: [id])
+
+  @@index([userId])
+  @@index([scheduleId])
+  @@index([sentAt])
+}
+
+// QuotesBank model - holds all motivational quotes that can be sent to users
+model QuotesBank {
+  id          String    @id @default(cuid())
+  content     String    // The actual quote text
+  author      String?   // Attribution to the quote author
+  category    String?   // Category for filtering (e.g., "motivation", "success", "gratitude")
+
+  isActive    Boolean   @default(true) // Whether this quote is available for sending
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  sentMessages SentMessage[]
+
+  @@index([category])
+  @@index([isActive])
+}
