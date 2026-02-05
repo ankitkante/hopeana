@@ -20,13 +20,12 @@ export default function Header() {
     return (
         <header className="w-full bg-white dark:bg-gray-900 relative border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between p-4">
-                <Link href="/" className="flex items-center gap-3">
+                <Link href="/" className="flex items-center">
                     <Image
-                        className="dark:invert"
-                        src="/globe.svg"
-                        alt="Logo"
-                        width={32}
-                        height={32}
+                        src="/logo.png"
+                        alt="Hopeana logo"
+                        width={50}
+                        height={50}
                     />
                     <h1 className="text-xl sm:text-2xl font-bold leading-none text-primary">
                         Hopeana
