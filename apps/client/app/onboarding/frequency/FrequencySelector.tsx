@@ -234,6 +234,7 @@ export default function FrequencySelector() {
             frequencyData: {
                 selectedSchedule,
                 timeOfDay: selectedTimeOfDay,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 interval: selectedInterval,
                 days: selectedDays
             }
