@@ -12,6 +12,8 @@ import { OnboardingContext } from "../onboarding-context";
 export default function ChannelSelector({
     options,
     defaultSelection,
+    firstName,
+    lastName,
 }: {
     options: Array<{
         label: string;
@@ -21,6 +23,8 @@ export default function ChannelSelector({
         input?: { type?: string; placeholder?: string };
     }>;
     defaultSelection?: string;
+    firstName?: string;
+    lastName?: string;
 }) {
     const ctx = useContext(OnboardingContext);
     if (!ctx) throw new Error("OnboardingContext missing");
@@ -50,6 +54,8 @@ export default function ChannelSelector({
         setOnboardingData((prev) => {
             return {
                 ...prev,
+                firstName,
+                lastName,
                 channelData: {
                     selectedChannel,
                     data: {
@@ -104,7 +110,7 @@ export default function ChannelSelector({
                     onClick={onChannelSave}
                     disabled={!selectedChannel || !email}
                 >
-                    <span className="truncate">Save Preferences</span>
+                    <span className="truncate">Next</span>
                 </button>
             </div>
         </>

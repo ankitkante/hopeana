@@ -55,6 +55,7 @@ types    → packages/types/src
 - **QuotesBank** - Repository of motivational quotes
 
 ### Key Patterns
+- **Schema changes require a db push** — any edit to `packages/db/prisma/schema.prisma` must be followed by `pnpm --filter db db:push` to sync PostgreSQL. No migration files are used.
 - Prisma singleton in `packages/db/src/index.ts` - import as `import { prisma } from 'db'`
 - Multi-step forms use React Context (see `onboarding-context.tsx`)
 - API routes use Next.js route handlers with Prisma transactions

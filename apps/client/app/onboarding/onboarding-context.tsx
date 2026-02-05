@@ -3,6 +3,8 @@
 import {createContext, useState, Dispatch, SetStateAction } from 'react'
 
 interface OnboardingData {
+    firstName?: string;
+    lastName?: string;
     channelData?: {
         selectedChannel: string | null;
         data: {

@@ -13,29 +13,35 @@ export async function POST(request: NextRequest) {
       const {data: { email }} = channelData;
       const { selectedChannel: channel } = channelData;
       const { selectedSchedule: frequency, timeOfDay, timezone } = frequencyData;
-      const name = body.name || null;
+      const firstName = body.firstName || null;
+      const lastName = body.lastName || null;
 
       let user: User | null = await tx.user.findUnique({
         where: { email },
       });
 
-      console.log("Onboarding - user found:", user);
+      
 
       if (user) {
+        console.log("Onboarding - user found:", user);
         // Update existing user
         user = await tx.user.update({
           where: { email },
           data: {
-            name: name || user.name,
+            firstName: firstName || user.firstName,
+            lastName: lastName || user.lastName,
             provider: "email",
           },
         });
       } else {
+        console.log("Onboarding - Creating new user:", email);
+
         // Create new user
         user = await tx.user.create({
           data: {
             email,
-            name,
+            firstName,
+            lastName,
             provider: "email",
           },
         });
@@ -106,7 +112,8 @@ export async function GET(request: NextRequest) {
       data: {
         userId: user.id,
         email: user.email,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         schedules: user.schedules.map((s: Schedule) => ({
           id: s.id,
           channel: s.channel,
