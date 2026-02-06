@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
-import { Autosend } from 'autosendjs';
+import { Autosend, type SendEmailOptions } from 'autosendjs';
 
 // POST /api/onboarding - Create a new user with their initial schedule
 export async function POST(request: NextRequest) {
@@ -63,17 +63,17 @@ export async function POST(request: NextRequest) {
     let emailSent = true;
     let emailId: string | null = null;
     try {
-      const emailPayload = {
+      const emailPayload: SendEmailOptions = {
         from: { email: process.env.WELCOME_FROM_EMAIL || 'hello@mail.hopeana.com', name: 'Team Hopeana' },
         to: { email: user.email },
-        replyTo: { email: process.env.HOPEANA_REPLY_TO_EMAIL, name: "Hopeana Support" },
+        replyTo: { email: process.env.HOPEANA_REPLY_TO_EMAIL || 'support@hopeana.com', name: "Hopeana Support" },
         subject: 'Welcome to Hopeana!',
         templateId: process.env.WELCOME_EMAIL_TEMPLATE_ID || '',
         dynamicData: {
           firstName: user.firstName || 'there',
           lastName: user.lastName || '',
           frequency: schedule.frequency,
-          timeOfDay: schedule.timeOfDay,
+          timeOfDay: schedule.timeOfDay || '',
           currentYear: new Date().getFullYear().toString(),
         },
       };
