@@ -64,9 +64,9 @@ export async function POST(request: NextRequest) {
     let emailId: string | null = null;
     try {
       const emailPayload: SendEmailOptions = {
-        from: { email: process.env.WELCOME_FROM_EMAIL || 'hello@mail.hopeana.com', name: 'Team Hopeana' },
+        from: { email: process.env.WELCOME_FROM_EMAIL || '', name: 'Team Hopeana' },
         to: { email: user.email },
-        replyTo: { email: process.env.HOPEANA_REPLY_TO_EMAIL || 'support@hopeana.com', name: "Hopeana Support" },
+        replyTo: { email: process.env.HOPEANA_REPLY_TO_EMAIL || '', name: "Hopeana Support" },
         subject: 'Welcome to Hopeana!',
         templateId: process.env.WELCOME_EMAIL_TEMPLATE_ID || '',
         dynamicData: {
