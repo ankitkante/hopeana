@@ -16,7 +16,7 @@ interface OnboardingData {
        timeOfDay?: string | null;
        timezone?: string | null;
        interval?: { value: string | null; unit: string | null } | null;
-       days?: string[] | null;
+       daysOfWeek?: string[] | null;
     };
 }
 

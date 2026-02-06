@@ -12,6 +12,7 @@ import {
 } from "@mdi/js";
 import Icon from "@mdi/react";
 import React, { useState, useContext, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { OnboardingContext } from "../onboarding-context";
 
 function CardRadio({ icon, value, label, subtitle, isSelected, onClick }: { icon: string; label: string; subtitle: string, value: string; isSelected: boolean; onClick: () => void }) {
@@ -29,9 +30,9 @@ function CardRadio({ icon, value, label, subtitle, isSelected, onClick }: { icon
     )
 }
 
-function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label: 'Weeks', value: 'weeks' }], onIntervalChange }: { unitList?: { label: string; value: string }[]; onIntervalChange: (obj: { value: string | null, unit: string | null }) => void }) {
-    const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
-    const [selectedValue, setSelectedValue] = useState<string | null>("1");
+function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label: 'Weeks', value: 'weeks' }], defaultValue = { value: "1", unit: "days" }, onIntervalChange }: { unitList?: { label: string; value: string }[]; defaultValue?: { value: string; unit: string }; onIntervalChange: (obj: { value: string | null, unit: string | null }) => void }) {
+    const [selectedUnit, setSelectedUnit] = useState<string | null>(defaultValue.unit);
+    const [selectedValue, setSelectedValue] = useState<string | null>(defaultValue.value);
 
     const onUnitSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedUnit(event.target.value);
@@ -61,6 +62,7 @@ function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label:
                     Unit</label>
                 <select
                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 font-bold text-gray-900 focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    value={selectedUnit || ""}
                     onChange={onUnitSelect}>
                     {unitList.map(({ label, value }) => {
                         return (
@@ -135,12 +137,16 @@ function SectionCard({ icon, label, grid=1, children }: { label: string, icon: s
 export default function FrequencySelector() {
     const ctx = useContext(OnboardingContext);
     if (!ctx) throw new Error("OnboardingContext missing");
-    const { setOnboardingData } = ctx;
+    const { onboardingData } = ctx;
+
+    const router = useRouter();
 
     const [selectedSchedule, setSelectedSchedule] = useState<string | null>('specific_days');
     const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<string | null>(null);
-    const [selectedInterval, setSelectedInterval] = useState<{ value: string | null, unit: string | null }>({ value: null, unit: null });
+    const [selectedInterval, setSelectedInterval] = useState<{ value: string | null, unit: string | null }>({ value: "1", unit: "days" });
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const onScheduleSelect = useCallback((value: string) => {
         setSelectedSchedule(value);
@@ -228,17 +234,44 @@ export default function FrequencySelector() {
         return true;
     });
 
-    const onCompleteSetup = () => {
-        setOnboardingData(prev => ({
-            ...prev,
-            frequencyData: {
-                selectedSchedule,
-                timeOfDay: selectedTimeOfDay,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                interval: selectedInterval,
-                days: selectedDays
+    const isFormValid = !!selectedSchedule && !!selectedTimeOfDay && selectedDays.length > 0
+        && (selectedSchedule !== 'custom_interval' || (!!selectedInterval.value && !!selectedInterval.unit));
+
+    const onCompleteSetup = async () => {
+        setSubmitting(true);
+        setError(null);
+
+        try {
+            const res = await fetch('/api/onboarding', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    firstName: onboardingData.firstName,
+                    lastName: onboardingData.lastName,
+                    channelData: onboardingData.channelData,
+                    frequencyData: {
+                        selectedSchedule,
+                        timeOfDay: selectedTimeOfDay,
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        interval: selectedInterval,
+                        daysOfWeek: selectedDays,
+                    },
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setError(data.error || 'Something went wrong');
+                return;
             }
-        }));
+
+            router.push('/dashboard');
+        } catch {
+            setError('Failed to complete setup. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     return (
@@ -257,7 +290,7 @@ export default function FrequencySelector() {
                                 onClick={() => onSelect(value)} />
                         ))}
                         {type === 'intervalPicker' && (
-                            <IntervalPicker onIntervalChange={onIntervalChange}></IntervalPicker>
+                            <IntervalPicker defaultValue={{ value: "1", unit: "days" }} onIntervalChange={onIntervalChange}></IntervalPicker>
                         )}
                         {
                             type === 'dayPicker' && (<DayPicker onDaysSelect={onDaysSelect}></DayPicker>)
@@ -265,13 +298,16 @@ export default function FrequencySelector() {
                     </SectionCard>
                 ))}
             </div>
+            {error && (
+                <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
+            )}
             <div className="pt-4">
                 <button
-                    className={`flex w-full items-center justify-center overflow-hidden rounded-xl bg-primary px-6 py-3 text-base font-bold text-background-dark shadow-sm transition-all cursor-pointer hover:brightness-110 active:scale-95`}
+                    className={`flex w-full items-center justify-center overflow-hidden rounded-xl bg-primary px-6 py-3 text-base font-bold text-background-dark shadow-sm transition-all ${!isFormValid || submitting ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-110 active:scale-95"}`}
                     onClick={onCompleteSetup}
-                    disabled={false}
+                    disabled={!isFormValid || submitting}
                 >
-                    <span className="truncate">Complete Setup</span>
+                    <span className="truncate">{submitting ? 'Setting up...' : 'Complete Setup'}</span>
                 </button>
             </div>
 

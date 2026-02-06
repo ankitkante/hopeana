@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     const { data: { email } } = channelData;
     const { selectedChannel: channel } = channelData;
-    const { selectedSchedule: frequency, timeOfDay, timezone } = frequencyData;
+    const { selectedSchedule: frequency, timeOfDay, timezone, interval, daysOfWeek } = frequencyData;
     const firstName = body.firstName || null;
     const lastName = body.lastName || null;
 
@@ -44,8 +44,13 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           channel,
           frequency,
-          timeOfDay: timeOfDay || "09:00",
+          timeOfDay: timeOfDay || "morning",
           timezone: timezone || "UTC",
+          daysOfWeek: daysOfWeek || [],
+          ...(frequency === 'custom_interval' && {
+            intervalValue: interval?.value ? parseInt(interval.value) : null,
+            intervalUnit: interval?.unit || null,
+          }),
           isActive: true,
         },
       });

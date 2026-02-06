@@ -38,12 +38,14 @@ model Schedule {
   userId      String
 
   // Schedule configuration
-  channel     String    // e.g., "email", "sms", "push"
-  frequency   String    // e.g., "daily", "weekly", "monthly"
-  timeOfDay   String?   // preferred time to receive messages (e.g., "09:00")
-  timezone    String?   // user's timezone for scheduling
-  dayOfWeek   Int?      // 0-6 for weekly schedules (0 = Sunday)
-  isActive    Boolean   @default(true)
+  channel       String    // e.g., "email", "sms", "push"
+  frequency     String    // e.g., "specific_days", "custom_interval"
+  timeOfDay     String?   // e.g., "morning", "afternoon", "evening"
+  timezone      String?   // user's timezone for scheduling
+  daysOfWeek    String[]  // e.g., ["monday", "wednesday", "friday"]
+  intervalValue Int?      // interval number (e.g., 2)
+  intervalUnit  String?   // interval unit (e.g., "days", "weeks")
+  isActive      Boolean   @default(true)
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

@@ -106,9 +106,9 @@ export default function ChannelSelector({
             </div>
             <div className="pt-4">
                 <button
-                    className={`flex w-full items-center justify-center overflow-hidden rounded-xl bg-primary px-6 py-3 text-base font-bold text-background-dark shadow-sm transition-all ${!selectedChannel || !email ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-110 active:scale-95"}`}
+                    className={`flex w-full items-center justify-center overflow-hidden rounded-xl bg-primary px-6 py-3 text-base font-bold text-background-dark shadow-sm transition-all ${!selectedChannel || !email || !firstName || !lastName ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-110 active:scale-95"}`}
                     onClick={onChannelSave}
-                    disabled={!selectedChannel || !email}
+                    disabled={!selectedChannel || !email || !firstName || !lastName}
                 >
                     <span className="truncate">Next</span>
                 </button>
