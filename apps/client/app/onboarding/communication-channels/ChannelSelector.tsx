@@ -12,6 +12,8 @@ import { OnboardingContext } from "../onboarding-context";
 export default function ChannelSelector({
     options,
     defaultSelection,
+    firstName,
+    lastName,
 }: {
     options: Array<{
         label: string;
@@ -21,6 +23,8 @@ export default function ChannelSelector({
         input?: { type?: string; placeholder?: string };
     }>;
     defaultSelection?: string;
+    firstName?: string;
+    lastName?: string;
 }) {
     const ctx = useContext(OnboardingContext);
     if (!ctx) throw new Error("OnboardingContext missing");
@@ -50,6 +54,8 @@ export default function ChannelSelector({
         setOnboardingData((prev) => {
             return {
                 ...prev,
+                firstName,
+                lastName,
                 channelData: {
                     selectedChannel,
                     data: {
@@ -100,11 +106,11 @@ export default function ChannelSelector({
             </div>
             <div className="pt-4">
                 <button
-                    className={`flex w-full items-center justify-center overflow-hidden rounded-xl bg-primary px-6 py-3 text-base font-bold text-background-dark shadow-sm transition-all ${!selectedChannel || !email ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-110 active:scale-95"}`}
+                    className={`flex w-full items-center justify-center overflow-hidden rounded-xl bg-primary px-6 py-3 text-base font-bold text-background-dark shadow-sm transition-all ${!selectedChannel || !email || !firstName || !lastName ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-110 active:scale-95"}`}
                     onClick={onChannelSave}
-                    disabled={!selectedChannel || !email}
+                    disabled={!selectedChannel || !email || !firstName || !lastName}
                 >
-                    <span className="truncate">Save Preferences</span>
+                    <span className="truncate">Next</span>
                 </button>
             </div>
         </>

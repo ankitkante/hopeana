@@ -1,6 +1,11 @@
+"use client"
+
+import { useState } from "react";
 import ChannelSelector from "./ChannelSelector";
 
 export default function SelectCommunicationChannel() {
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const channelOptions = [
         {
             label: "Email",
@@ -41,10 +46,35 @@ export default function SelectCommunicationChannel() {
                         Receive your daily inspiration
                     </h1>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-400">First Name</label>
+                        <input
+                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-gray-300 bg-white p-3 text-base font-normal leading-normal text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400"
+                            placeholder="First name"
+                            type="text"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="mb-2 block text-xs font-semibold text-gray-600 dark:text-gray-400">Last Name</label>
+                        <input
+                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-gray-300 bg-white p-3 text-base font-normal leading-normal text-gray-900 placeholder:text-gray-500 focus:border-primary focus:outline-0 focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400"
+                            placeholder="Last name"
+                            type="text"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                        />
+                    </div>
+                </div>
+
                 <ChannelSelector
                     options={channelOptions}
                     defaultSelection="email"
-                ></ChannelSelector>
+                    firstName={firstName}
+                    lastName={lastName}
+                />
             </main>
         </div>
     )

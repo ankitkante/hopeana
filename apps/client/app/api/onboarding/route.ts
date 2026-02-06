@@ -1,69 +1,106 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
+import { Autosend } from 'autosendjs';
 
 // POST /api/onboarding - Create a new user with their initial schedule
 export async function POST(request: NextRequest) {
   try {
+    const autosend = new Autosend(process.env.EMAIL_API_KEY || '');
+
     const body = await request.json();
     const { channelData, frequencyData } = body;
 
-    // Create user and schedule in a transaction
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Check if user already exists
-      const {data: { email }} = channelData;
-      const { selectedChannel: channel } = channelData;
-      const { selectedSchedule: frequency, timeOfDay, timezone } = frequencyData;
-      const name = body.name || null;
+    const { data: { email } } = channelData;
+    const { selectedChannel: channel } = channelData;
+    const { selectedSchedule: frequency, timeOfDay, timezone, interval, daysOfWeek } = frequencyData;
+    const firstName = body.firstName || null;
+    const lastName = body.lastName || null;
 
-      let user: User | null = await tx.user.findUnique({
-        where: { email },
+    // Return early if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: `A user with email ${email} already exists` },
+        { status: 409 }
+      );
+    }
+
+    // Create user and schedule atomically
+    const { user, schedule } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const user: User = await tx.user.create({
+        data: {
+          email,
+          firstName,
+          lastName,
+          provider: "email",
+        },
       });
 
-      console.log("Onboarding - user found:", user);
+      const schedule: Schedule = await tx.schedule.create({
+        data: {
+          userId: user.id,
+          channel,
+          frequency,
+          timeOfDay: timeOfDay || "morning",
+          timezone: timezone || "UTC",
+          daysOfWeek: daysOfWeek || [],
+          ...(frequency === 'custom_interval' && {
+            intervalValue: interval?.value ? parseInt(interval.value) : null,
+            intervalUnit: interval?.unit || null,
+          }),
+          isActive: true,
+        },
+      });
 
-      if (user) {
-        // Update existing user
-        user = await tx.user.update({
-          where: { email },
-          data: {
-            name: name || user.name,
-            provider: "email",
-          },
-        });
-      } else {
-        // Create new user
-        user = await tx.user.create({
-          data: {
-            email,
-            name,
-            provider: "email",
-          },
-        });
-      }
-
-      // // Create a new schedule for the user
-      // const schedule: Schedule = await tx.schedule.create({
-      //   data: {
-      //     userId: user.id,
-      //     channel,
-      //     frequency,
-      //     timeOfDay: timeOfDay || "09:00",
-      //     timezone: timezone || "UTC",
-      //     isActive: true,
-      //   },
-      // });
-
-      // return { user, schedule };
-      return {user}
+      return { user, schedule };
     });
+
+    // Send welcome email
+    // Set WELCOME_FROM_EMAIL and WELCOME_EMAIL_TEMPLATE_ID in .env.local
+    let emailSent = true;
+    let emailId: string | null = null;
+    try {
+      const emailPayload = {
+        from: { email: process.env.WELCOME_FROM_EMAIL || 'hello@mail.hopeana.com', name: 'Team Hopeana' },
+        to: { email: user.email },
+        replyTo: { email: process.env.HOPEANA_REPLY_TO_EMAIL, name: "Hopeana Support" },
+        subject: 'Welcome to Hopeana!',
+        templateId: process.env.WELCOME_EMAIL_TEMPLATE_ID || '',
+        dynamicData: {
+          firstName: user.firstName || 'there',
+          lastName: user.lastName || '',
+          frequency: schedule.frequency,
+          timeOfDay: schedule.timeOfDay,
+          currentYear: new Date().getFullYear().toString(),
+        },
+      };
+      console.log("Sending welcome email with payload:", JSON.stringify(emailPayload, null, 2));
+
+      const emailResponse = await autosend.emails.send(emailPayload);
+      console.log("Autosend response:", JSON.stringify(emailResponse, null, 2));
+
+      if (emailResponse?.success) {
+        emailId = emailResponse?.data?.emailId ?? null;
+        console.log(`Email sent successfully with ID: ${emailId}`);
+      } else {
+        emailSent = false;
+        console.error("Autosend returned success: false", emailResponse);
+      }
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      emailSent = false;
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        userId: result.user.id,
-        email: result.user.email,
+        userId: user.id,
+        email: user.email,
+        emailSent,
       }
-      
     });
   } catch (error) {
     console.error("Onboarding error:", error);
@@ -106,7 +143,8 @@ export async function GET(request: NextRequest) {
       data: {
         userId: user.id,
         email: user.email,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         schedules: user.schedules.map((s: Schedule) => ({
           id: s.id,
           channel: s.channel,

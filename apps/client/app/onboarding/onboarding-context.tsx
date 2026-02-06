@@ -3,6 +3,8 @@
 import {createContext, useState, Dispatch, SetStateAction } from 'react'
 
 interface OnboardingData {
+    firstName?: string;
+    lastName?: string;
     channelData?: {
         selectedChannel: string | null;
         data: {
@@ -12,8 +14,9 @@ interface OnboardingData {
     frequencyData?: {
        selectedSchedule: string | null;
        timeOfDay?: string | null;
+       timezone?: string | null;
        interval?: { value: string | null; unit: string | null } | null;
-       days?: string[] | null;
+       daysOfWeek?: string[] | null;
     };
 }
 
