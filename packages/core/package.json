@@ -1,5 +1,9 @@
 {
   "name": "core",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "db": "workspace:*",
+    "autosendjs": "^1.0.1"
+  }
 }
