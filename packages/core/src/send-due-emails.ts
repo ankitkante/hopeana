@@ -1,5 +1,5 @@
 import { prisma, type Schedule } from "db";
-import { Autosend, type SendEmailOptions, type BulkSendEmailOptions } from "autosendjs";
+import { Autosend, type BulkSendEmailOptions, type BulkRecipient } from "autosendjs";
 import { isScheduleDue, isInPreferredWindow } from "./is-schedule-due";
 
 /** Cron interval in minutes. Used to calculate available slots in a window. */
@@ -48,6 +48,7 @@ export async function sendDueEmails(): Promise<SendResult> {
     include: {
       user: true,
       sentMessages: {
+        where: { status: "sent" },
         orderBy: { sentAt: "desc" },
         take: 1,
       },
@@ -89,8 +90,8 @@ export async function sendDueEmails(): Promise<SendResult> {
   const batch = dueSchedules.slice(0, batchSize);
   result.remaining = Math.max(0, dueSchedules.length - batchSize);
 
-  // 6. Prepare email payloads (pick a unique quote per user)
-  const prepared: { schedule: typeof batch[number]; quote: { id: string; content: string; author: string | null }; payload: SendEmailOptions }[] = [];
+  // 6. Prepare recipients (pick a unique quote per user)
+  const prepared: { schedule: typeof batch[number]; quote: { id: string; content: string; author: string | null }; recipient: BulkRecipient }[] = [];
 
   for (const schedule of batch) {
     const quote = await pickQuote(schedule.userId, quotes.map((q) => q.id));
@@ -104,19 +105,11 @@ export async function sendDueEmails(): Promise<SendResult> {
     prepared.push({
       schedule,
       quote,
-      payload: {
-        from: {
-          email: process.env.QUOTE_FROM_EMAIL || process.env.WELCOME_FROM_EMAIL || "",
-          name: "Hopeana",
-        },
-        to: { email: schedule.user.email },
-        replyTo: {
-          email: process.env.HOPEANA_REPLY_TO_EMAIL || "",
-          name: "Hopeana Support",
-        },
-        subject: "Your Daily Dose of Motivation",
-        templateId: process.env.QUOTE_EMAIL_TEMPLATE_ID || "",
+      recipient: {
+        email: schedule.user.email,
+        name: schedule.user.firstName || undefined,
         dynamicData: {
+          firstName: schedule.user.firstName || "there",
           quoteContent: quote.content,
           quoteAuthor: quote.author || "Unknown",
           currentYear: now.getFullYear().toString(),
@@ -130,14 +123,23 @@ export async function sendDueEmails(): Promise<SendResult> {
 
   for (const chunk of chunks) {
     const bulkPayload: BulkSendEmailOptions = {
-      emails: chunk.map((item) => item.payload),
+      from: {
+        email: process.env.QUOTE_FROM_EMAIL || process.env.WELCOME_FROM_EMAIL || "",
+        name: "Hopeana",
+      },
+      replyTo: {
+        email: process.env.HOPEANA_REPLY_TO_EMAIL || "",
+        name: "Hopeana Support",
+      },
+      subject: "Your Daily Dose of Motivation",
+      templateId: process.env.QUOTE_EMAIL_TEMPLATE_ID || "",
+      recipients: chunk.map((item) => item.recipient),
     };
 
     try {
       const bulkResponse = await autosend.emails.bulk(bulkPayload);
 
       if (bulkResponse.success) {
-        // All emails in this chunk succeeded
         result.sent += chunk.length;
         for (const item of chunk) {
           await prisma.sentMessage.create({
@@ -151,10 +153,9 @@ export async function sendDueEmails(): Promise<SendResult> {
           });
         }
       } else {
-        // Entire chunk failed
         result.failed += chunk.length;
         result.errors.push(
-          `Bulk send failed for ${chunk.length} emails: ${bulkResponse.error || "unknown error"}`
+          `Bulk send failed for ${chunk.length} emails: ${typeof bulkResponse.error === "object" ? JSON.stringify(bulkResponse.error) : bulkResponse.error || "unknown error"}`
         );
         for (const item of chunk) {
           try {
@@ -179,7 +180,6 @@ export async function sendDueEmails(): Promise<SendResult> {
         `Bulk send error for ${chunk.length} emails: ${message}`
       );
 
-      // Log failed attempts
       for (const item of chunk) {
         try {
           await prisma.sentMessage.create({

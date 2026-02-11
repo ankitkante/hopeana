@@ -18,6 +18,10 @@ pnpm --filter client lint         # Run ESLint
 pnpm --filter db generate         # Generate Prisma client
 pnpm --filter db db:push          # Push schema changes to PostgreSQL
 
+# Scripts
+pnpm seed:quotes                  # Seed motivational quotes into QuotesBank
+pnpm test:scheduler               # Test scheduled email sending locally
+
 # Dependencies
 pnpm install                      # Install all workspace dependencies
 ```
@@ -31,6 +35,7 @@ pnpm install                      # Install all workspace dependencies
 - **packages/core** - Core business logic (scheduled email sending, timing logic)
 - **packages/types** - Shared TypeScript types
 - **packages/utils** - Shared utilities
+- **scripts/** - One-off operational scripts (seeding, data migrations). Run with `tsx` via root `package.json` commands
 
 ### Tech Stack
 - Next.js 16.1.1 with React 19, TypeScript 5.9
@@ -63,7 +68,7 @@ types    → packages/types/src
 
 ## Autosend (Email Service)
 
-SDK package: `autosendjs`. Initialized once per request handler with the API key from `AUTOSEND_API_KEY` env var.
+SDK package: `autosendjs` (v1.0.3+). Initialized once per request handler with the API key from `EMAIL_API_KEY` env var.
 
 Emails are sent via `autosend.emails.send()`. The project uses the **templateId** approach — templates are created in the Autosend dashboard, and dynamic values are injected via `dynamicData`.
 
@@ -87,12 +92,12 @@ The system sends motivational quote emails on user-defined schedules. Architectu
 - **Evening**: 5 PM – 9 PM (16 fifteen-min slots)
 
 ### Batching & Overflow
-- **Bulk API**: uses `autosend.emails.bulk()` to send up to 100 emails per API call (vs 1-by-1). Hard cap of 500 emails per invocation.
+- **Bulk API**: uses `autosend.emails.bulk()` with shared `from`/`subject`/`templateId` at top level and `recipients: BulkRecipient[]` with per-recipient `dynamicData`. Up to 100 emails per call. Hard cap of 500 emails per invocation.
 - **Capacity per window**: Morning ~12,000, Afternoon ~10,000, Evening ~8,000 emails
 - **Fairness**: schedules are shuffled (Fisher-Yates) before processing so different users get served each invocation, preventing starvation
 - **Overflow**: if a window can't send all due emails, remaining emails continue sending in later slots (even past the window end). Overflow stops at midnight — unsent emails from yesterday are dropped
 - **Priority**: in-window emails are prioritized over overflow emails via sort
-- **Duplicate prevention**: `alreadySentToday()` checks `SentMessage` records to avoid sending twice in one day
+- **Duplicate prevention**: `alreadySentToday()` checks `SentMessage` records (status `"sent"` only — failed sends don't count) to avoid sending twice in one day
 
 ### Quote Selection
 - `pickQuote()` selects a random quote the user hasn't received recently, falling back to any quote if all have been seen
@@ -102,9 +107,17 @@ The system sends motivational quote emails on user-defined schedules. Architectu
 - `dynamicData` keys: `firstName`, `quoteContent`, `quoteAuthor`, `currentYear`
 - Static template vars (set in Autosend dashboard): `manage_subscription_url`, `unsubscribe_url`
 
+## Scripts (`scripts/`)
+
+Operational scripts live at the repo root in `scripts/`, run via `tsx`. They use a dynamic `await import()` for the prisma client so `dotenv` loads `DATABASE_URL` before prisma initializes.
+
+- **`seed-quotes.ts`** — Seeds `QuotesBank` from `scripts/data/quotes.json` (100 quotes, 10 categories). Skips duplicates by content match. Run: `pnpm seed:quotes`
+- **`test-scheduler.ts`** — Locally invokes `sendDueEmails()` to test the scheduled email pipeline end-to-end. Loads env from `apps/client/.env.local`. Run: `pnpm test:scheduler`
+- **`data/quotes.json`** — Quote data file. Add/remove entries here to manage the quote bank.
+
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection string (required by db package)
-- `AUTOSEND_API_KEY` - Email service API key
+- `EMAIL_API_KEY` - Autosend email service API key
 - `WELCOME_FROM_EMAIL` - Sender address for outgoing emails
 - `WELCOME_EMAIL_TEMPLATE_ID` - Template ID for the welcome email
 - `HOPEANA_REPLY_TO_EMAIL` - Reply-to address for outgoing emails
