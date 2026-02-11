@@ -28,7 +28,7 @@ pnpm install                      # Install all workspace dependencies
 - **apps/client** - Next.js 16 web application (App Router)
 - **apps/server** - Backend server (planned)
 - **packages/db** - Prisma ORM with PostgreSQL, exports `prisma` client singleton
-- **packages/core** - Core business logic (placeholder)
+- **packages/core** - Core business logic (scheduled email sending, timing logic)
 - **packages/types** - Shared TypeScript types
 - **packages/utils** - Shared utilities
 
@@ -72,9 +72,41 @@ Emails are sent via `autosend.emails.send()`. The project uses the **templateId*
 - Welcome email `dynamicData` keys: `firstName`, `lastName`, `frequency`, `timeOfDay`. Other template variables should be set as static variables in the Autosend template dashboard.
 - Email is sent **after** the DB transaction commits. A failed email send does not roll back user/schedule creation.
 
+## Scheduled Email Sending
+
+The system sends motivational quote emails on user-defined schedules. Architecture separates portable core logic from the deployment trigger, so switching hosting only requires rewriting a thin wrapper.
+
+### How It Works
+- **Netlify scheduled function** (`netlify/functions/send-scheduled-emails.ts`) runs every 15 minutes via cron (`*/15 * * * *`), calls `sendDueEmails()` from `packages/core`
+- **`sendDueEmails()`** (`packages/core/src/send-due-emails.ts`) — main orchestrator: queries active schedules, filters to due ones, picks unseen quotes per user, sends via Autosend, logs to `SentMessage`
+- **`isScheduleDue()`** (`packages/core/src/is-schedule-due.ts`) — pure function that determines if a schedule should fire now based on time windows, frequency, timezone, and duplicate prevention
+
+### Time Windows (in user's timezone)
+- **Morning**: 6 AM – 12 PM (24 fifteen-min slots)
+- **Afternoon**: 12 PM – 5 PM (20 fifteen-min slots)
+- **Evening**: 5 PM – 9 PM (16 fifteen-min slots)
+
+### Batching & Overflow
+- **Bulk API**: uses `autosend.emails.bulk()` to send up to 100 emails per API call (vs 1-by-1). Hard cap of 500 emails per invocation.
+- **Capacity per window**: Morning ~12,000, Afternoon ~10,000, Evening ~8,000 emails
+- **Fairness**: schedules are shuffled (Fisher-Yates) before processing so different users get served each invocation, preventing starvation
+- **Overflow**: if a window can't send all due emails, remaining emails continue sending in later slots (even past the window end). Overflow stops at midnight — unsent emails from yesterday are dropped
+- **Priority**: in-window emails are prioritized over overflow emails via sort
+- **Duplicate prevention**: `alreadySentToday()` checks `SentMessage` records to avoid sending twice in one day
+
+### Quote Selection
+- `pickQuote()` selects a random quote the user hasn't received recently, falling back to any quote if all have been seen
+
+### Quote Email Template
+- Template source: `email_templates/quote-email.html`
+- `dynamicData` keys: `firstName`, `quoteContent`, `quoteAuthor`, `currentYear`
+- Static template vars (set in Autosend dashboard): `manage_subscription_url`, `unsubscribe_url`
+
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection string (required by db package)
 - `AUTOSEND_API_KEY` - Email service API key
 - `WELCOME_FROM_EMAIL` - Sender address for outgoing emails
 - `WELCOME_EMAIL_TEMPLATE_ID` - Template ID for the welcome email
 - `HOPEANA_REPLY_TO_EMAIL` - Reply-to address for outgoing emails
+- `QUOTE_EMAIL_TEMPLATE_ID` - Template ID for the scheduled quote email
+- `QUOTE_FROM_EMAIL` - Sender address for quote emails (can reuse `WELCOME_FROM_EMAIL`)

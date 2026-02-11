@@ -2,12 +2,17 @@ import type { Schedule, SentMessage } from "db";
 
 /**
  * Time-of-day windows (in the schedule's local timezone).
- * The cron runs every 15 min, so we use hour ranges to define each window.
+ * The cron runs every 15 min. Batch size is calculated dynamically
+ * based on due count and available slots in the window.
+ *
+ * Morning:    6 AM – 12 PM (6 hrs = 24 fifteen-min slots)
+ * Afternoon: 12 PM –  5 PM (5 hrs = 20 fifteen-min slots)
+ * Evening:    5 PM –  9 PM (4 hrs = 16 fifteen-min slots)
  */
 const TIME_WINDOWS: Record<string, { startHour: number; endHour: number }> = {
-  morning: { startHour: 7, endHour: 9 },
-  afternoon: { startHour: 12, endHour: 14 },
-  evening: { startHour: 18, endHour: 20 },
+  morning: { startHour: 6, endHour: 12 },
+  afternoon: { startHour: 12, endHour: 17 },
+  evening: { startHour: 17, endHour: 21 },
 };
 
 const WEEKDAY_NAMES = [
@@ -35,13 +40,16 @@ export function isScheduleDue(
   lastSentMessage: Pick<SentMessage, "sentAt"> | null,
   now: Date = new Date()
 ): boolean {
-  // 1. Check time-of-day window in the schedule's timezone
-  if (!isInTimeWindow(schedule.timeOfDay, schedule.timezone, now)) {
+  const inWindow = isInTimeWindow(schedule.timeOfDay, schedule.timezone, now);
+  const pastWindow = isPastTimeWindow(schedule.timeOfDay, schedule.timezone, now);
+
+  // 1. Not yet in the time window today — definitely not due
+  if (!inWindow && !pastWindow) {
     return false;
   }
 
-  // 2. Check if already sent during this time window (duplicate prevention)
-  if (lastSentMessage && alreadySentInCurrentWindow(schedule.timeOfDay, schedule.timezone, lastSentMessage.sentAt, now)) {
+  // 2. Check if already sent today (duplicate prevention)
+  if (lastSentMessage && alreadySentToday(schedule.timeOfDay, schedule.timezone, lastSentMessage.sentAt, now)) {
     return false;
   }
 
@@ -59,7 +67,7 @@ export function isScheduleDue(
     );
   }
 
-  // "daily" or any other frequency — if we're in the time window, it's due
+  // "daily" or any other frequency — due if in window OR overflowing past it
   return true;
 }
 
@@ -76,8 +84,23 @@ function isInTimeWindow(
   return localHour >= window.startHour && localHour < window.endHour;
 }
 
-/** Check if a message was already sent during the current time window. */
-function alreadySentInCurrentWindow(
+/** Check if the current time is past (after) the time window today.
+ *  Overflow naturally stops at midnight — after that, the schedule
+ *  is neither in-window nor past-window for the new day. */
+function isPastTimeWindow(
+  timeOfDay: string | null,
+  timezone: string | null,
+  now: Date
+): boolean {
+  const window = TIME_WINDOWS[timeOfDay || "morning"];
+  if (!window) return false;
+
+  const localHour = getLocalHour(now, timezone || "UTC");
+  return localHour >= window.endHour;
+}
+
+/** Check if a message was already sent today (at or after the window start). */
+function alreadySentToday(
   timeOfDay: string | null,
   timezone: string | null,
   sentAt: Date,
@@ -88,12 +111,7 @@ function alreadySentInCurrentWindow(
 
   const tz = timezone || "UTC";
 
-  // Get today's window start in the schedule's timezone
   const localDateStr = now.toLocaleDateString("en-CA", { timeZone: tz }); // YYYY-MM-DD
-  const windowStart = new Date(`${localDateStr}T${String(window.startHour).padStart(2, "0")}:00:00`);
-
-  // Convert windowStart to the schedule's timezone for comparison
-  // We compare: was sentAt after the start of today's window?
   const sentAtLocalHour = getLocalHour(sentAt, tz);
   const sentAtLocalDate = sentAt.toLocaleDateString("en-CA", { timeZone: tz });
 
@@ -149,6 +167,11 @@ function getLocalWeekday(date: Date, timezone: string): string {
     date.toLocaleString("en-US", { timeZone: timezone })
   ).getDay();
   return WEEKDAY_NAMES[dayIndex];
+}
+
+/** Check if a schedule is currently within its preferred time window (not overflowing). */
+export function isInPreferredWindow(schedule: Schedule, now: Date = new Date()): boolean {
+  return isInTimeWindow(schedule.timeOfDay, schedule.timezone, now);
 }
 
 export { TIME_WINDOWS, WEEKDAY_NAMES };

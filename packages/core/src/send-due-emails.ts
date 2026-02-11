@@ -1,22 +1,44 @@
 import { prisma, type Schedule } from "db";
-import { Autosend, type SendEmailOptions } from "autosendjs";
-import { isScheduleDue } from "./is-schedule-due";
+import { Autosend, type SendEmailOptions, type BulkSendEmailOptions } from "autosendjs";
+import { isScheduleDue, isInPreferredWindow } from "./is-schedule-due";
+
+/** Cron interval in minutes. Used to calculate available slots in a window. */
+const CRON_INTERVAL_MIN = 15;
+
+/** Smallest window is evening (4 hrs). Used as fallback for slot calculation. */
+const MIN_WINDOW_HOURS = 4;
+
+/** Hard cap per invocation. With bulk API (100 emails/call at 2 req/sec)
+ *  and DB overhead, 500 fits within Netlify's 30s scheduled function timeout. */
+const MAX_PER_INVOCATION = 500;
+
+/** Max emails per bulk API call (Autosend limit). */
+const BULK_CHUNK_SIZE = 100;
 
 interface SendResult {
   sent: number;
   failed: number;
   skipped: number;
+  remaining: number;
   errors: string[];
 }
 
 /**
  * Main orchestrator: finds all due schedules and sends quote emails.
  *
+ * Dynamically calculates batch size based on how many emails are due.
+ * The cron runs every 15 minutes. Small batches go out immediately;
+ * large batches are spread across available slots in the window.
+ *
+ * Emails are sent via Autosend's bulk API (up to 100 per call) for throughput.
+ * Schedules are shuffled before processing so different users get served each
+ * invocation, preventing starvation when volume exceeds capacity.
+ *
  * This function is deployment-agnostic — call it from a Netlify scheduled
  * function, a Vercel cron, a plain node-cron script, or anything else.
  */
 export async function sendDueEmails(): Promise<SendResult> {
-  const result: SendResult = { sent: 0, failed: 0, skipped: 0, errors: [] };
+  const result: SendResult = { sent: 0, failed: 0, skipped: 0, remaining: 0, errors: [] };
 
   const autosend = new Autosend(process.env.EMAIL_API_KEY || "");
 
@@ -44,27 +66,45 @@ export async function sendDueEmails(): Promise<SendResult> {
 
   const now = new Date();
 
-  // 3. Process each schedule
-  for (const schedule of schedules) {
+  // 3. Filter to due schedules only
+  const dueSchedules = schedules.filter((schedule) => {
     const lastSent = schedule.sentMessages[0] ?? null;
+    return isScheduleDue(schedule, lastSent, now);
+  });
 
-    if (!isScheduleDue(schedule, lastSent, now)) {
-      result.skipped++;
+  result.skipped = schedules.length - dueSchedules.length;
+
+  // 4. Shuffle for fairness, then stable-sort so in-window emails
+  //    still go before overflow — but within each group the order is random.
+  //    This prevents the same users from always being at the front of the queue.
+  shuffleArray(dueSchedules);
+  dueSchedules.sort((a, b) => {
+    const aInWindow = isInPreferredWindow(a, now) ? 0 : 1;
+    const bInWindow = isInPreferredWindow(b, now) ? 0 : 1;
+    return aInWindow - bInWindow;
+  });
+
+  // 5. Dynamic batch size based on email count
+  const batchSize = calculateBatchSize(dueSchedules.length);
+  const batch = dueSchedules.slice(0, batchSize);
+  result.remaining = Math.max(0, dueSchedules.length - batchSize);
+
+  // 6. Prepare email payloads (pick a unique quote per user)
+  const prepared: { schedule: typeof batch[number]; quote: { id: string; content: string; author: string | null }; payload: SendEmailOptions }[] = [];
+
+  for (const schedule of batch) {
+    const quote = await pickQuote(schedule.userId, quotes.map((q) => q.id));
+
+    if (!quote) {
+      result.errors.push(`No unsent quotes available for user ${schedule.userId}`);
+      result.failed++;
       continue;
     }
 
-    try {
-      // Pick a quote the user hasn't received recently
-      const quote = await pickQuote(schedule.userId, quotes.map((q) => q.id));
-
-      if (!quote) {
-        result.errors.push(`No unsent quotes available for user ${schedule.userId}`);
-        result.failed++;
-        continue;
-      }
-
-      // Send email
-      const emailPayload: SendEmailOptions = {
+    prepared.push({
+      schedule,
+      quote,
+      payload: {
         from: {
           email: process.env.QUOTE_FROM_EMAIL || process.env.WELCOME_FROM_EMAIL || "",
           name: "Hopeana",
@@ -77,60 +117,106 @@ export async function sendDueEmails(): Promise<SendResult> {
         subject: "Your Daily Dose of Motivation",
         templateId: process.env.QUOTE_EMAIL_TEMPLATE_ID || "",
         dynamicData: {
-          firstName: schedule.user.firstName || "there",
           quoteContent: quote.content,
           quoteAuthor: quote.author || "Unknown",
           currentYear: now.getFullYear().toString(),
         },
-      };
+      },
+    });
+  }
 
-      const emailResponse = await autosend.emails.send(emailPayload);
+  // 7. Send in bulk chunks of 100
+  const chunks = chunkArray(prepared, BULK_CHUNK_SIZE);
 
-      // Log to SentMessage
-      const status = emailResponse?.success ? "sent" : "failed";
-      await prisma.sentMessage.create({
-        data: {
-          userId: schedule.userId,
-          scheduleId: schedule.id,
-          quoteId: quote.id,
-          channel: "email",
-          status,
-        },
-      });
+  for (const chunk of chunks) {
+    const bulkPayload: BulkSendEmailOptions = {
+      emails: chunk.map((item) => item.payload),
+    };
 
-      if (status === "sent") {
-        result.sent++;
+    try {
+      const bulkResponse = await autosend.emails.bulk(bulkPayload);
+
+      if (bulkResponse.success) {
+        // All emails in this chunk succeeded
+        result.sent += chunk.length;
+        for (const item of chunk) {
+          await prisma.sentMessage.create({
+            data: {
+              userId: item.schedule.userId,
+              scheduleId: item.schedule.id,
+              quoteId: item.quote.id,
+              channel: "email",
+              status: "sent",
+            },
+          });
+        }
       } else {
-        result.failed++;
+        // Entire chunk failed
+        result.failed += chunk.length;
         result.errors.push(
-          `Email send returned failure for user ${schedule.userId}`
+          `Bulk send failed for ${chunk.length} emails: ${bulkResponse.error || "unknown error"}`
         );
+        for (const item of chunk) {
+          try {
+            await prisma.sentMessage.create({
+              data: {
+                userId: item.schedule.userId,
+                scheduleId: item.schedule.id,
+                quoteId: item.quote.id,
+                channel: "email",
+                status: "failed",
+              },
+            });
+          } catch {
+            // If logging fails, continue
+          }
+        }
       }
     } catch (err) {
-      result.failed++;
+      result.failed += chunk.length;
       const message = err instanceof Error ? err.message : String(err);
       result.errors.push(
-        `Error processing schedule ${schedule.id}: ${message}`
+        `Bulk send error for ${chunk.length} emails: ${message}`
       );
 
-      // Still log the failed attempt
-      try {
-        await prisma.sentMessage.create({
-          data: {
-            userId: schedule.userId,
-            scheduleId: schedule.id,
-            quoteId: "unknown",
-            channel: "email",
-            status: "failed",
-          },
-        });
-      } catch {
-        // If logging fails too, just continue
+      // Log failed attempts
+      for (const item of chunk) {
+        try {
+          await prisma.sentMessage.create({
+            data: {
+              userId: item.schedule.userId,
+              scheduleId: item.schedule.id,
+              quoteId: item.quote.id,
+              channel: "email",
+              status: "failed",
+            },
+          });
+        } catch {
+          // If logging fails, continue
+        }
       }
     }
   }
 
   return result;
+}
+
+/**
+ * Calculate how many emails to send in this invocation.
+ *
+ * Spreads emails evenly across available 15-min slots in the smallest
+ * window, but never exceeds MAX_PER_INVOCATION to stay within the
+ * serverless function timeout.
+ *
+ * Capacity per window (at 500 emails/slot via bulk API):
+ *   Morning (24 slots):   12,000 emails
+ *   Afternoon (20 slots): 10,000 emails
+ *   Evening (16 slots):    8,000 emails
+ */
+function calculateBatchSize(dueCount: number): number {
+  const slotsInWindow = (MIN_WINDOW_HOURS * 60) / CRON_INTERVAL_MIN;
+  const spread = Math.ceil(dueCount / slotsInWindow);
+  return Math.min(spread, MAX_PER_INVOCATION, dueCount);
 }
 
 /**
@@ -154,4 +240,21 @@ async function pickQuote(userId: string, allQuoteIds: string[]) {
   const randomId = pool[Math.floor(Math.random() * pool.length)];
 
   return prisma.quotesBank.findUnique({ where: { id: randomId } });
+}
+
+/** Fisher-Yates shuffle — mutates the array in place. */
+function shuffleArray<T>(arr: T[]): void {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/** Split an array into chunks of a given size. */
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
 }

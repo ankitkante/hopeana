@@ -7,7 +7,7 @@ export default async (req: Request, context: Context) => {
   const result = await sendDueEmails();
 
   console.log(
-    `Done: ${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped`
+    `Done: ${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped, ${result.remaining} remaining for next hour`
   );
 
   if (result.errors.length > 0) {
@@ -20,5 +20,5 @@ export default async (req: Request, context: Context) => {
 };
 
 export const config: Config = {
-  schedule: "*/15 * * * *",
+  schedule: "*/15 * * * *", // every 15 minutes
 };
