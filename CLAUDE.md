@@ -69,13 +69,13 @@ types    → packages/types/src
 
 ## Autosend (Email Service)
 
-SDK package: `autosendjs` (v1.0.3+). Initialized once per request handler with the API key from `EMAIL_API_KEY` env var.
+SDK package: `autosendjs` (v1.0.3+). Initialized once per request handler with the API key from `EMAIL_API_KEY` env var. Use `SendEmailRequest` type for email payloads (aliased from `SendEmailOptions`).
 
 Emails are sent via `autosend.emails.send()`. The project uses the **templateId** approach — templates are created in the Autosend dashboard, and dynamic values are injected via `dynamicData`.
 
 - **HTML source files** live in `email_templates/`. These are the source designs to upload into Autosend as templates — they are not used at runtime.
 - The HTML templates use `{{variable}}` syntax for placeholders. All `{{...}}` tokens in the HTML must have a matching key in `dynamicData` (or be set as static vars in the Autosend dashboard).
-- Welcome email `dynamicData` keys: `firstName`, `lastName`, `frequency`, `timeOfDay`. Other template variables should be set as static variables in the Autosend template dashboard.
+- Welcome email `dynamicData` keys: `firstName`, `lastName`, `frequency`, `timeOfDay`, `currentYear`. The `frequency` and `timeOfDay` values are human-readable labels (e.g., "Every day", "Morning") — not raw DB values. Other template variables should be set as static variables in the Autosend template dashboard.
 - Email is sent **after** the DB transaction commits. A failed email send does not roll back user/schedule creation.
 
 ## Scheduled Email Sending
