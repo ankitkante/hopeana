@@ -168,39 +168,23 @@ function FreeDashboard({
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
         <StatCard
-          label="Credits Remaining"
+          label="Messages Remaining"
           value={subscription.messagesRemaining}
           icon={<Icon path={mdiLightningBolt} size={1} />}
           progressBar={{
             current: subscription.messagesRemaining,
             max: subscription.messageLimit,
           }}
-          subtitle="Trial plan"
         />
         <StatCard
           label="Scheduled Posts"
           value={schedules?.activeCount ?? 0}
           icon={<Icon path={mdiCalendarClock} size={1} />}
-          badge={
-            schedules && schedules.newThisWeek > 0
-              ? { text: `+${schedules.newThisWeek} new`, color: "bg-green-50 text-green-600" }
-              : undefined
-          }
-          subtitle="this week"
         />
         <StatCard
           label="Total Sent"
           value={messageStats?.totalSent ?? 0}
           icon={<Icon path={mdiSend} size={1} />}
-          badge={
-            messageStats
-              ? {
-                  text: `${messageStats.successRate}%`,
-                  color: "bg-green-50 text-green-600",
-                }
-              : undefined
-          }
-          subtitle="success rate"
         />
       </div>
 
@@ -273,33 +257,11 @@ function ProDashboard({
           label="Scheduled Posts"
           value={schedules?.activeCount ?? 0}
           icon={<Icon path={mdiCalendarClock} size={1} />}
-          badge={
-            schedules && schedules.newThisWeek > 0
-              ? { text: `+${schedules.newThisWeek} new`, color: "bg-green-50 text-green-600" }
-              : undefined
-          }
-          subtitle="this week"
         />
         <StatCard
           label="Total Sent This Month"
           value={messageStats?.sentThisMonth ?? 0}
           icon={<Icon path={mdiSend} size={1} />}
-          badge={
-            messageStats && messageStats.monthOverMonthChange !== 0
-              ? {
-                  text: `${messageStats.monthOverMonthChange > 0 ? "↗" : "↘"} ${Math.abs(messageStats.monthOverMonthChange)}%`,
-                  color:
-                    messageStats.monthOverMonthChange > 0
-                      ? "bg-green-50 text-green-600"
-                      : "bg-red-50 text-red-600",
-                }
-              : undefined
-          }
-          subtitle={
-            messageStats
-              ? `Compared to ${messageStats.sentLastMonth} last month`
-              : undefined
-          }
         />
       </div>
 
