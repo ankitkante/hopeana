@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import type { User, Schedule, SentMessage, QuotesBank } from "@prisma/client";
+import type { User, Schedule, SentMessage, QuotesBank, Subscription } from "@prisma/client";
 
 // Create a global Prisma client instance for reuse
 const globalForPrisma = globalThis as unknown as {
@@ -22,4 +22,4 @@ if (process.env.NODE_ENV !== "production") {
 
 // Re-export Prisma client and types
 export { PrismaClient, Prisma };
-export type { User, Schedule, SentMessage, QuotesBank };
+export type { User, Schedule, SentMessage, QuotesBank, Subscription };
