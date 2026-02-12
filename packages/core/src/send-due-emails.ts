@@ -141,36 +141,32 @@ export async function sendDueEmails(): Promise<SendResult> {
 
       if (bulkResponse.success) {
         result.sent += chunk.length;
-        for (const item of chunk) {
-          await prisma.sentMessage.create({
-            data: {
-              userId: item.schedule.userId,
-              scheduleId: item.schedule.id,
-              quoteId: item.quote.id,
-              channel: "email",
-              status: "sent",
-            },
-          });
-        }
+        await prisma.sentMessage.createMany({
+          data: chunk.map((item) => ({
+            userId: item.schedule.userId,
+            scheduleId: item.schedule.id,
+            quoteId: item.quote.id,
+            channel: "email",
+            status: "sent",
+          })),
+        });
       } else {
         result.failed += chunk.length;
         result.errors.push(
           `Bulk send failed for ${chunk.length} emails: ${typeof bulkResponse.error === "object" ? JSON.stringify(bulkResponse.error) : bulkResponse.error || "unknown error"}`
         );
-        for (const item of chunk) {
-          try {
-            await prisma.sentMessage.create({
-              data: {
-                userId: item.schedule.userId,
-                scheduleId: item.schedule.id,
-                quoteId: item.quote.id,
-                channel: "email",
-                status: "failed",
-              },
-            });
-          } catch {
-            // If logging fails, continue
-          }
+        try {
+          await prisma.sentMessage.createMany({
+            data: chunk.map((item) => ({
+              userId: item.schedule.userId,
+              scheduleId: item.schedule.id,
+              quoteId: item.quote.id,
+              channel: "email",
+              status: "failed",
+            })),
+          });
+        } catch {
+          // If logging fails, continue
         }
       }
     } catch (err) {
@@ -180,20 +176,18 @@ export async function sendDueEmails(): Promise<SendResult> {
         `Bulk send error for ${chunk.length} emails: ${message}`
       );
 
-      for (const item of chunk) {
-        try {
-          await prisma.sentMessage.create({
-            data: {
-              userId: item.schedule.userId,
-              scheduleId: item.schedule.id,
-              quoteId: item.quote.id,
-              channel: "email",
-              status: "failed",
-            },
-          });
-        } catch {
-          // If logging fails, continue
-        }
+      try {
+        await prisma.sentMessage.createMany({
+          data: chunk.map((item) => ({
+            userId: item.schedule.userId,
+            scheduleId: item.schedule.id,
+            quoteId: item.quote.id,
+            channel: "email",
+            status: "failed",
+          })),
+        });
+      } catch {
+        // If logging fails, continue
       }
     }
   }
