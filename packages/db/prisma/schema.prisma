@@ -27,6 +27,7 @@ model User {
   // Relations
   schedules     Schedule[]
   sentMessages  SentMessage[]
+  subscription  Subscription?
 
   @@index([email])
   @@index([provider, providerId])
@@ -78,6 +79,25 @@ model SentMessage {
   @@index([userId])
   @@index([scheduleId])
   @@index([sentAt])
+}
+
+// Subscription model - tracks user plan and message usage
+model Subscription {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  plan          String    @default("free")    // "free" | "pro"
+  status        String    @default("active")  // "active" | "cancelled" | "expired"
+  messageLimit  Int       @default(5)         // free=5 (trial), pro=30
+  messagesUsed  Int       @default(0)
+  billingDate   DateTime?                     // next billing date (pro only)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }
 
 // QuotesBank model - holds all motivational quotes that can be sent to users
