@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Icon from "@mdi/react";
@@ -8,6 +8,14 @@ import { mdiMenu, mdiClose } from "@mdi/js";
 
 export default function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    useEffect(() => {
+        fetch("/api/auth/status")
+            .then((res) => res.json())
+            .then((data) => setIsAuthenticated(data.authenticated === true))
+            .catch(() => setIsAuthenticated(false));
+    }, []);
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
@@ -37,18 +45,26 @@ export default function Header() {
                     <Link href="/pricing" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
                         Pricing
                     </Link>
-                    <Link href="/dashboard" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
-                        Dashboard
-                    </Link>
-                    <Link href="/login" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
-                        Login
-                    </Link>
-                    <Link
-                        href="/signup"
-                        className="px-4 py-2 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
-                    >
-                        Sign Up
-                    </Link>
+                    {isAuthenticated ? (
+                        <Link
+                            href="/dashboard"
+                            className="px-4 py-2 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
+                        >
+                            Dashboard
+                        </Link>
+                    ) : (
+                        <>
+                            <Link href="/login" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
+                                Login
+                            </Link>
+                            <Link
+                                href="/signup"
+                                className="px-4 py-2 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out"
+                            >
+                                Sign Up
+                            </Link>
+                        </>
+                    )}
                 </div>
 
                 {/* Mobile Hamburger Button */}
@@ -73,27 +89,32 @@ export default function Header() {
                         >
                             Pricing
                         </Link>
-                        <Link
-                            href="/dashboard"
-                            className="text-gray-700 dark:text-gray-300 py-2 hover:text-gray-900 dark:hover:text-white transition"
-                            onClick={closeMenu}
-                        >
-                            Dashboard
-                        </Link>
-                        <Link
-                            href="/login"
-                            className="text-gray-700 dark:text-gray-300 py-2 hover:text-gray-900 dark:hover:text-white transition"
-                            onClick={closeMenu}
-                        >
-                            Login
-                        </Link>
-                        <Link
-                            href="/signup"
-                            className="px-4 py-2 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out text-center"
-                            onClick={closeMenu}
-                        >
-                            Sign Up
-                        </Link>
+                        {isAuthenticated ? (
+                            <Link
+                                href="/dashboard"
+                                className="px-4 py-2 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out text-center"
+                                onClick={closeMenu}
+                            >
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <>
+                                <Link
+                                    href="/login"
+                                    className="text-gray-700 dark:text-gray-300 py-2 hover:text-gray-900 dark:hover:text-white transition"
+                                    onClick={closeMenu}
+                                >
+                                    Login
+                                </Link>
+                                <Link
+                                    href="/signup"
+                                    className="px-4 py-2 rounded-md bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out text-center"
+                                    onClick={closeMenu}
+                                >
+                                    Sign Up
+                                </Link>
+                            </>
+                        )}
                     </nav>
                 </div>
             )}
