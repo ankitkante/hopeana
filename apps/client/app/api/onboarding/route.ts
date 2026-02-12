@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
-import { Autosend, type SendEmailOptions } from 'autosendjs';
+import { Autosend, SendEmailRequest } from 'autosendjs';
 import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  daily: "Every day",
+  specific_days: "Specific days of the week",
+  custom_interval: "Custom interval",
+};
+
+const TIME_OF_DAY_LABELS: Record<string, string> = {
+  morning: "Morning",
+  afternoon: "Afternoon",
+  evening: "Evening",
+};
 
 // POST /api/onboarding - Create a new user with their initial schedule
 export async function POST(request: NextRequest) {
@@ -74,7 +86,7 @@ export async function POST(request: NextRequest) {
     let emailSent = true;
     let emailId: string | null = null;
     try {
-      const emailPayload: SendEmailOptions = {
+      const emailPayload: SendEmailRequest = {
         from: { email: process.env.WELCOME_FROM_EMAIL || '', name: 'Team Hopeana' },
         to: { email: user.email },
         replyTo: { email: process.env.HOPEANA_REPLY_TO_EMAIL || '', name: "Hopeana Support" },
@@ -83,8 +95,8 @@ export async function POST(request: NextRequest) {
         dynamicData: {
           firstName: user.firstName || 'there',
           lastName: user.lastName || '',
-          frequency: schedule.frequency,
-          timeOfDay: schedule.timeOfDay || '',
+          frequency: FREQUENCY_LABELS[schedule.frequency] || schedule.frequency,
+          timeOfDay: TIME_OF_DAY_LABELS[schedule.timeOfDay || ''] || schedule.timeOfDay || '',
           currentYear: new Date().getFullYear().toString(),
         },
       };
