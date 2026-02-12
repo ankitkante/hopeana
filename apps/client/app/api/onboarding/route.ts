@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
 import { Autosend, type SendEmailOptions } from 'autosendjs';
+import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
 
 // POST /api/onboarding - Create a new user with their initial schedule
 export async function POST(request: NextRequest) {
@@ -55,7 +56,17 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return { user, schedule };
+      const subscription = await tx.subscription.create({
+        data: {
+          userId: user.id,
+          plan: "free",
+          status: "active",
+          messageLimit: 5,
+          messagesUsed: 0,
+        },
+      });
+
+      return { user, schedule, subscription };
     });
 
     // Send welcome email
@@ -94,7 +105,9 @@ export async function POST(request: NextRequest) {
       emailSent = false;
     }
 
-    return NextResponse.json({
+    const token = await signToken({ userId: user.id, email: user.email });
+
+    const response = NextResponse.json({
       success: true,
       data: {
         userId: user.id,
@@ -102,6 +115,16 @@ export async function POST(request: NextRequest) {
         emailSent,
       }
     });
+
+    response.cookies.set(AUTH_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+
+    return response;
   } catch (error) {
     console.error("Onboarding error:", error);
     return NextResponse.json(
