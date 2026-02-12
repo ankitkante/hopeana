@@ -55,12 +55,13 @@ types    → packages/types/src
 
 ### Database Models
 - **User** - Account info with social login support
+- **Subscription** - Plan tracking (free trial = 5 messages, pro = 30/month)
 - **Schedule** - Delivery preferences (channel, frequency, timezone)
 - **SentMessage** - Delivery tracking with status
 - **QuotesBank** - Repository of motivational quotes
 
 ### Key Patterns
-- **Schema changes require a db push** — any edit to `packages/db/prisma/schema.prisma` must be followed by `pnpm --filter db db:push` to sync PostgreSQL. No migration files are used.
+- **Schema changes require a db push** — any edit to `packages/db/prisma/schema.prisma` must be followed by `pnpm --filter db db:push` to sync PostgreSQL. No migration files are used. **Important:** `db:push` only syncs the DB that `DATABASE_URL` points to (usually the local/direct Supabase connection in `packages/db/.env`). After merging a PR with schema changes, remind the user to run `pnpm --filter db db:push` against the production Supabase DB if it hasn't been done already.
 - Prisma singleton in `packages/db/src/index.ts` - import as `import { prisma } from 'db'`
 - Multi-step forms use React Context (see `onboarding-context.tsx`)
 - API routes use Next.js route handlers with Prisma transactions
@@ -117,6 +118,7 @@ Operational scripts live at the repo root in `scripts/`, run via `tsx`. They use
 
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection string (required by db package)
+- `JWT_SECRET` - Secret key for signing/verifying JWT auth tokens (used by `apps/client/lib/auth.ts`)
 - `EMAIL_API_KEY` - Autosend email service API key
 - `WELCOME_FROM_EMAIL` - Sender address for outgoing emails
 - `WELCOME_EMAIL_TEMPLATE_ID` - Template ID for the welcome email
