@@ -14,6 +14,7 @@ import {
   mdiAlertCircleOutline,
   mdiCalendarBlankOutline,
 } from "@mdi/js";
+import Link from "next/link";
 import Toast from "../components/Toast";
 
 interface Schedule {
@@ -150,13 +151,13 @@ export default function SchedulesPage() {
             Manage your recurring quote deliveries and timing.
           </p>
         </div>
-        <button
-          onClick={() => alert("Coming soon!")}
+        <Link
+          href="/dashboard/settings/schedules/new"
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-500 hover:bg-green-600 rounded-lg transition"
         >
           <Icon path={mdiPlus} size={0.7} />
           New Schedule
-        </button>
+        </Link>
       </div>
 
       {/* Table */}
@@ -243,13 +244,13 @@ export default function SchedulesPage() {
                 >
                   <Icon path={schedule.isActive ? mdiPause : mdiPlay} size={0.75} />
                 </button>
-                <button
-                  onClick={() => alert("Edit coming soon!")}
+                <Link
+                  href={`/dashboard/settings/schedules/${schedule.id}/edit`}
                   title="Edit schedule"
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition inline-flex"
                 >
                   <Icon path={mdiPencilOutline} size={0.75} />
-                </button>
+                </Link>
                 <button
                   onClick={() => setDeleteTarget(schedule.id)}
                   title="Delete schedule"

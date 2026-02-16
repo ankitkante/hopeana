@@ -82,6 +82,8 @@ types    → packages/types/src
 - Settings uses nested routes: `/dashboard/settings/subscription`, `/dashboard/settings/schedules`
 - `DashboardHeader` component shared between dashboard and settings (includes avatar dropdown with Settings + Logout)
 - Account deactivation is soft-delete: sets `user.isActive = false` and pauses all schedules (no data deletion)
+- Schedule CRUD: create at `/dashboard/settings/schedules/new`, edit at `/dashboard/settings/schedules/[id]/edit`
+- Single-schedule API: `GET /api/schedules/[id]` (fetch) and `PATCH /api/schedules/[id]` (full update) with ownership verification
 
 ### UI Component Patterns
 - Cards: `bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6`
@@ -91,6 +93,7 @@ types    → packages/types/src
 - Icons: `@mdi/react` with `@mdi/js` icon paths
 - Loading skeletons: `animate-pulse` with gray placeholder divs
 - Tables: CSS Grid-based (`grid-cols-12`) responsive layout, not `<table>` elements (see `SentMessagesTable`)
+- Shared form components in `components/`: `CardRadio`, `SectionCard`, `DayPicker` — used by both onboarding and schedule CRUD pages
 
 ## Autosend (Email Service)
 

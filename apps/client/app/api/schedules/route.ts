@@ -107,3 +107,48 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Failed to delete schedule" }, { status: 500 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await getUserFromRequest(request);
+    if (!auth) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { channel, frequency, timeOfDay, daysOfWeek, intervalValue, intervalUnit } = body;
+
+    if (!channel || !frequency || !timeOfDay) {
+      return NextResponse.json({ success: false, error: "channel, frequency, and timeOfDay are required" }, { status: 400 });
+    }
+
+    if (!Array.isArray(daysOfWeek) || daysOfWeek.length === 0) {
+      return NextResponse.json({ success: false, error: "At least one day must be selected" }, { status: 400 });
+    }
+
+    if (frequency === "custom_interval" && (!intervalValue || !intervalUnit)) {
+      return NextResponse.json({ success: false, error: "intervalValue and intervalUnit are required for custom intervals" }, { status: 400 });
+    }
+
+    const schedule = await prisma.schedule.create({
+      data: {
+        userId: auth.userId,
+        channel,
+        frequency,
+        timeOfDay,
+        timezone: body.timezone || "UTC",
+        daysOfWeek,
+        ...(frequency === "custom_interval" && {
+          intervalValue: parseInt(intervalValue),
+          intervalUnit,
+        }),
+        isActive: true,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: schedule }, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/schedules error:", error);
+    return NextResponse.json({ success: false, error: "Failed to create schedule" }, { status: 500 });
+  }
+}

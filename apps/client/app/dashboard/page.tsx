@@ -156,7 +156,7 @@ function FreeDashboard({
           Welcome back, {user.firstName || "there"} 👋
         </h1>
         <Link
-          href="#"
+          href="/dashboard/settings/schedules/new"
           className="flex items-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition"
         >
           <Icon path={mdiPlus} size={0.8} />
@@ -231,7 +231,7 @@ function ProDashboard({
           </span>
         </div>
         <Link
-          href="#"
+          href="/dashboard/settings/schedules/new"
           className="flex items-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition"
         >
           <Icon path={mdiPlus} size={0.8} />
