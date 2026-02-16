@@ -61,11 +61,36 @@ types    → packages/types/src
 - **QuotesBank** - Repository of motivational quotes
 
 ### Key Patterns
-- **Schema changes require a db push** — any edit to `packages/db/prisma/schema.prisma` must be followed by `pnpm --filter db db:push` to sync PostgreSQL. No migration files are used. **Important:** `db:push` only syncs the DB that `DATABASE_URL` points to (usually the local/direct Supabase connection in `packages/db/.env`). After merging a PR with schema changes, remind the user to run `pnpm --filter db db:push` against the production Supabase DB if it hasn't been done already.
+- **Schema changes require a db push + generate** — any edit to `packages/db/prisma/schema.prisma` must be followed by `pnpm --filter db generate` (to regenerate the Prisma client types) and `pnpm --filter db db:push` (to sync PostgreSQL). No migration files are used. **Important:** `db:push` only syncs the DB that `DATABASE_URL` points to (usually the local/direct Supabase connection in `packages/db/.env`). After merging a PR with schema changes, remind the user to run `pnpm --filter db db:push` against the production Supabase DB if it hasn't been done already.
 - Prisma singleton in `packages/db/src/index.ts` - import as `import { prisma } from 'db'`
 - Multi-step forms use React Context (see `onboarding-context.tsx`)
 - API routes use Next.js route handlers with Prisma transactions
+- API response format: `{ success: true, data: {...} }` for success, `{ error: "message" }` for errors
+- Auth check in API routes: `const auth = await getUserFromRequest(request)` from `@/lib/get-user-from-request`
 - Server components by default; `"use client"` for interactive components
+
+### Authentication
+- JWT-based auth using `jose` library (`apps/client/lib/auth.ts`)
+- Token stored in HTTP-only cookie: `hopeana_token` (7-day expiration)
+- Token payload: `{ userId: string; email: string }`
+- `getUserFromRequest()` (`apps/client/lib/get-user-from-request.ts`) extracts user from request — checks injected headers first, falls back to cookie verification
+- Auth status endpoint: `GET /api/auth/status`
+
+### Dashboard & Settings
+- Dashboard at `/dashboard` — client component, fetches user/subscription/schedules/messageStats via `Promise.all`
+- Settings at `/dashboard/settings` — tabbed layout (Personal Info, Subscription, My Schedules)
+- Settings uses nested routes: `/dashboard/settings/subscription`, `/dashboard/settings/schedules`
+- `DashboardHeader` component shared between dashboard and settings (includes avatar dropdown with Settings + Logout)
+- Account deactivation is soft-delete: sets `user.isActive = false` and pauses all schedules (no data deletion)
+
+### UI Component Patterns
+- Cards: `bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6`
+- Primary buttons: `bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg`
+- Form inputs: `rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-3` with `focus:ring-2 focus:ring-primary/30`
+- Form validation: React Hook Form + Yup with `yupResolver`, `mode: "onBlur"`
+- Icons: `@mdi/react` with `@mdi/js` icon paths
+- Loading skeletons: `animate-pulse` with gray placeholder divs
+- Tables: CSS Grid-based (`grid-cols-12`) responsive layout, not `<table>` elements (see `SentMessagesTable`)
 
 ## Autosend (Email Service)
 
