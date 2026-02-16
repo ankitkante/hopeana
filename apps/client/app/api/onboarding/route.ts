@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: `A user with email ${email} already exists` },
+        { success: false, error: `A user with email ${email} already exists` },
         { status: 409 }
       );
     }
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Onboarding error:", error);
     return NextResponse.json(
-      { error: "Failed to complete onboarding" },
+      { success: false, error: "Failed to complete onboarding" },
       { status: 500 }
     );
   }
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     if (!email) {
       return NextResponse.json(
-        { error: "Email parameter is required" },
+        { success: false, error: "Email parameter is required" },
         { status: 400 }
       );
     }
@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error checking onboarding status:", error);
     return NextResponse.json(
-      { error: "Failed to check onboarding status" },
+      { success: false, error: "Failed to check onboarding status" },
       { status: 500 }
     );
   }
