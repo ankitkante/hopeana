@@ -21,6 +21,8 @@ model User {
   provider      String?   // e.g., "google", "github", "email"
   providerId    String?   // ID from the social provider
 
+  isActive      Boolean   @default(true)
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
