@@ -36,12 +36,4 @@ body {
   color: var(--primary);
 }
 
-/* Selected radio */
-.radio-card.selected {
-  border-color: var(--primary);
-  background-color: color-mix(in srgb, var(--primary) 12.5%, transparent);
-}
-.radio-card.selected .radio-icon {
-  color: var(--primary);
-}
 
