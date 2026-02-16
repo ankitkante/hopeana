@@ -97,7 +97,7 @@ export default function PricingPage() {
                             Try for Free
                         </button>
                         <div className="space-y-4">
-                            <CheckItem>First 10 messages free</CheckItem>
+                            <CheckItem>First 5 messages free</CheckItem>
                             <CheckItem>Email delivery</CheckItem>
                             <CheckItem>Basic scheduling</CheckItem>
                         </div>
@@ -120,7 +120,7 @@ export default function PricingPage() {
                             Subscribe Now
                         </button>
                         <div className="space-y-4">
-                            <CheckItem>Up to 100 messages/month</CheckItem>
+                            <CheckItem>Up to 30 messages/month</CheckItem>
                             <CheckItem>Social media & Email</CheckItem>
                             <CheckItem>Advanced scheduling options</CheckItem>
                             <CheckItem>Priority support</CheckItem>
