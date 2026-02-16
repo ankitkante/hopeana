@@ -8,7 +8,7 @@ interface CurrentPlanCardProps {
 }
 
 const features = [
-  "Premium support included",
+  "Priority support included",
   "Access to exclusive quotes",
   "Advanced analytics",
 ];

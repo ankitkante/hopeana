@@ -83,10 +83,10 @@ export default function SubscriptionPage() {
               </div>
               <div>
                 <p className="font-semibold text-gray-900 dark:text-white">
-                  {isPro ? "Hopeana Plus" : "Hopeana Free"}
+                  {isPro ? "Hopeana Pro" : "Hopeana Free"}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {isPro ? "Premium access to all wellness features" : "Basic motivational quotes"}
+                  {isPro ? "Full access to all wellness features" : "Basic motivational quotes"}
                 </p>
               </div>
             </div>
