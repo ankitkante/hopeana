@@ -65,7 +65,7 @@ types    → packages/types/src
 - Prisma singleton in `packages/db/src/index.ts` - import as `import { prisma } from 'db'`
 - Multi-step forms use React Context (see `onboarding-context.tsx`)
 - API routes use Next.js route handlers with Prisma transactions
-- API response format: `{ success: true, data: {...} }` for success, `{ error: "message" }` for errors
+- API response format: `{ success: true, data: {...} }` for success, `{ success: false, error: "message" }` for errors
 - Auth check in API routes: `const auth = await getUserFromRequest(request)` from `@/lib/get-user-from-request`
 - Server components by default; `"use client"` for interactive components
 
