@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await getUserFromRequest(request);
     if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const schedules = await prisma.schedule.findMany({
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("GET /api/schedules error:", error);
-    return NextResponse.json({ error: "Failed to fetch schedules" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to fetch schedules" }, { status: 500 });
   }
 }
 
@@ -53,19 +53,19 @@ export async function PATCH(request: NextRequest) {
   try {
     const auth = await getUserFromRequest(request);
     if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { scheduleId, isActive } = await request.json();
     if (!scheduleId || typeof isActive !== "boolean") {
-      return NextResponse.json({ error: "scheduleId and isActive are required" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "scheduleId and isActive are required" }, { status: 400 });
     }
 
     const schedule = await prisma.schedule.findFirst({
       where: { id: scheduleId, userId: auth.userId },
     });
     if (!schedule) {
-      return NextResponse.json({ error: "Schedule not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Schedule not found" }, { status: 404 });
     }
 
     const updated = await prisma.schedule.update({
@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("PATCH /api/schedules error:", error);
-    return NextResponse.json({ error: "Failed to update schedule" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to update schedule" }, { status: 500 });
   }
 }
 
@@ -84,19 +84,19 @@ export async function DELETE(request: NextRequest) {
   try {
     const auth = await getUserFromRequest(request);
     if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { scheduleId } = await request.json();
     if (!scheduleId) {
-      return NextResponse.json({ error: "scheduleId is required" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "scheduleId is required" }, { status: 400 });
     }
 
     const schedule = await prisma.schedule.findFirst({
       where: { id: scheduleId, userId: auth.userId },
     });
     if (!schedule) {
-      return NextResponse.json({ error: "Schedule not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Schedule not found" }, { status: 404 });
     }
 
     await prisma.schedule.delete({ where: { id: scheduleId } });
@@ -104,6 +104,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/schedules error:", error);
-    return NextResponse.json({ error: "Failed to delete schedule" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to delete schedule" }, { status: 500 });
   }
 }

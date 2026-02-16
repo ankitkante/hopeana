@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await getUserFromRequest(request);
     if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const startOfMonth = new Date();
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("GET /api/messages/stats error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch message stats" },
+      { success: false, error: "Failed to fetch message stats" },
       { status: 500 }
     );
   }

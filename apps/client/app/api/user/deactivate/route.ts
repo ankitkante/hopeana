@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await getUserFromRequest(request);
     if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     // Deactivate user and all their schedules in a transaction
@@ -35,6 +35,6 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("POST /api/user/deactivate error:", error);
-    return NextResponse.json({ error: "Failed to deactivate account" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to deactivate account" }, { status: 500 });
   }
 }
