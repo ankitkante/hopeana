@@ -9,27 +9,92 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Channel {
+  email
+  sms
+  push
+}
+
+enum Frequency {
+  specific_days
+  custom_interval
+}
+
+enum TimeOfDay {
+  morning
+  afternoon
+  evening
+}
+
+enum IntervalUnit {
+  hours
+  days
+  weeks
+}
+
+enum DayOfWeek {
+  sunday
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+}
+
+enum SubscriptionPlan {
+  free
+  pro
+}
+
+enum SubscriptionStatus {
+  active
+  cancelled
+  failed
+  expired
+}
+
+enum MessageStatus {
+  sent
+  delivered
+  failed
+}
+
+enum PaymentStatus {
+  succeeded
+  failed
+  pending
+  processing
+  cancelled
+  abandoned
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
 // User model - stores user info like email and other social login details
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  firstName     String?
-  lastName      String?
-  passwordHash  String?
+  id           String  @id @default(cuid())
+  email        String  @unique
+  firstName    String?
+  lastName     String?
+  passwordHash String?
 
   // Social login fields
-  provider      String?   // e.g., "google", "github", "email"
-  providerId    String?   // ID from the social provider
+  provider   String? // e.g., "google", "github", "email"
+  providerId String? // ID from the social provider
 
-  isActive      Boolean   @default(true)
+  isActive Boolean @default(true)
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  schedules     Schedule[]
-  sentMessages  SentMessage[]
-  subscription  Subscription?
+  schedules    Schedule[]
+  sentMessages SentMessage[]
+  subscription Subscription?
+  payments     Payment[]
 
   @@index([email])
   @@index([provider, providerId])
@@ -37,24 +102,24 @@ model User {
 
 // Schedule model - each user can create multiple schedules for receiving messages
 model Schedule {
-  id          String    @id @default(cuid())
-  userId      String
+  id     String @id @default(cuid())
+  userId String
 
   // Schedule configuration
-  channel       String    // e.g., "email", "sms", "push"
-  frequency     String    // e.g., "specific_days", "custom_interval"
-  timeOfDay     String?   // e.g., "morning", "afternoon", "evening"
-  timezone      String?   // user's timezone for scheduling
-  daysOfWeek    String[]  // e.g., ["monday", "wednesday", "friday"]
-  intervalValue Int?      // interval number (e.g., 2)
-  intervalUnit  String?   // interval unit (e.g., "days", "weeks")
-  isActive      Boolean   @default(true)
+  channel       Channel
+  frequency     Frequency
+  timeOfDay     TimeOfDay?
+  timezone      String? // user's timezone for scheduling
+  daysOfWeek    DayOfWeek[]
+  intervalValue Int? // interval number (e.g., 2)
+  intervalUnit  IntervalUnit?
+  isActive      Boolean @default(true)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   sentMessages SentMessage[]
 
   @@index([userId])
@@ -63,20 +128,20 @@ model Schedule {
 
 // SentMessage model - tracks messages sent by the server
 model SentMessage {
-  id          String    @id @default(cuid())
-  userId      String
-  scheduleId  String
-  quoteId     String
+  id         String @id @default(cuid())
+  userId     String
+  scheduleId String
+  quoteId    String
 
   // Message tracking
-  sentAt      DateTime  @default(now())
-  channel     String    // channel through which the message was sent
-  status      String    @default("sent") // "sent", "delivered", "failed"
+  sentAt  DateTime      @default(now())
+  channel Channel
+  status  MessageStatus @default(sent)
 
   // Relations
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  schedule    Schedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  quote       QuotesBank @relation(fields: [quoteId], references: [id])
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedule Schedule   @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  quote    QuotesBank @relation(fields: [quoteId], references: [id])
 
   @@index([userId])
   @@index([scheduleId])
@@ -85,38 +150,66 @@ model SentMessage {
 
 // Subscription model - tracks user plan and message usage
 model Subscription {
-  id            String    @id @default(cuid())
-  userId        String    @unique
-  plan          String    @default("free")    // "free" | "pro"
-  status        String    @default("active")  // "active" | "cancelled" | "expired"
-  messageLimit  Int       @default(5)         // free=5 (trial), pro=30
-  messagesUsed  Int       @default(0)
-  billingDate   DateTime?                     // next billing date (pro only)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  plan                  SubscriptionPlan   @default(free)
+  status                SubscriptionStatus @default(active)
+  messageLimit          Int                @default(5) // free=5 (trial), pro=30
+  messagesUsed          Int                @default(0)
+  gatewaySubscriptionId String? // payment gateway's subscription ID
+  cancelAtPeriodEnd     Boolean            @default(false) // true if user cancelled but access continues until billingDate
+  billingDate           DateTime? // next billing date (pro only)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   // Relations
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
+  @@index([gatewaySubscriptionId])
 }
 
 // QuotesBank model - holds all motivational quotes that can be sent to users
 model QuotesBank {
-  id          String    @id @default(cuid())
-  content     String    // The actual quote text
-  author      String?   // Attribution to the quote author
-  category    String?   // Category for filtering (e.g., "motivation", "success", "gratitude")
+  id       String  @id @default(cuid())
+  content  String // The actual quote text
+  author   String? // Attribution to the quote author
+  category String? // Category for filtering (e.g., "motivation", "success", "gratitude")
 
-  isActive    Boolean   @default(true) // Whether this quote is available for sending
+  isActive Boolean @default(true) // Whether this quote is available for sending
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   sentMessages SentMessage[]
 
   @@index([category])
   @@index([isActive])
+}
+
+// Payment model - audit trail for payment gateway webhook events
+model Payment {
+  id                    String        @id @default(cuid())
+  userId                String?
+  gatewayPaymentId      String        @unique // payment gateway's payment ID (idempotency key)
+  gatewaySubscriptionId String? // linked subscription ID from gateway
+  gatewayCustomerId     String? // customer ID from gateway
+  customerEmail         String // customer email from webhook
+  amount                Int // total_amount in smallest currency unit
+  currency              String // e.g., "USD"
+  status                PaymentStatus
+  failureReason         String? // error details on failure
+  rawPayload            String? // full JSON payload for debugging
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([customerEmail])
+  @@index([status])
+  @@index([gatewaySubscriptionId])
 }

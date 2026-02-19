@@ -93,7 +93,7 @@ export default function SentMessagesTable() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/messages?page=${page}&limit=5`)
+    fetch(`/api/v1/messages?page=${page}&limit=5`)
       .then((res) => res.json())
       .then((json) => setData(json.data))
       .catch(() => setData(null))

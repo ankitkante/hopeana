@@ -39,7 +39,7 @@ export default function UpgradeCard() {
           href="/pricing"
           className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 hover:bg-green-400 text-white font-semibold rounded-lg transition"
         >
-          Unlock Premium
+          Unlock Pro
           <Icon path={mdiArrowRight} size={0.8} />
         </Link>
       </div>

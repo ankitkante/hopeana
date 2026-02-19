@@ -76,7 +76,7 @@ export default function SchedulesPage() {
   useEffect(() => {
     async function fetchSchedules() {
       try {
-        const res = await fetch("/api/schedules");
+        const res = await fetch("/api/v1/schedules");
         if (res.ok) {
           const data = await res.json();
           setSchedules(data.data.schedules);
@@ -97,7 +97,7 @@ export default function SchedulesPage() {
       prev.map((s) => (s.id === scheduleId ? { ...s, isActive: newActive } : s))
     );
     try {
-      const res = await fetch("/api/schedules", {
+      const res = await fetch("/api/v1/schedules", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scheduleId, isActive: newActive }),
@@ -117,7 +117,7 @@ export default function SchedulesPage() {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      const res = await fetch("/api/schedules", {
+      const res = await fetch("/api/v1/schedules", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scheduleId: deleteTarget }),

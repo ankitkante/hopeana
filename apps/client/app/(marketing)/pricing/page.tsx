@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { mdiCheck, mdiChevronUp, mdiChevronDown } from "@mdi/js";
 import Icon from "@mdi/react";
+import { useToast } from "@/components/Toast";
+import { redirectToCheckout } from "@/lib/checkout";
 
 interface FAQItem {
     question: string;
@@ -20,7 +23,7 @@ const faqData: FAQItem[] = [
     },
     {
         question: "What happens if I use all my messages?",
-        answer: "If you reach your message limit, you can upgrade to a higher plan or wait until the next billing cycle for your messages to reset.",
+        answer: "If you reach your message limit, your quotes will pause until your next billing cycle begins and your count resets. It's our way of keeping things fair and predictable.",
     },
 ];
 
@@ -65,7 +68,120 @@ function CheckItem({ children }: { children: React.ReactNode }) {
     );
 }
 
+type AuthState = "loading" | "unauthenticated" | "free" | "pro";
+
 export default function PricingPage() {
+    const router = useRouter();
+    const { showToast } = useToast();
+    const [authState, setAuthState] = useState<AuthState>("loading");
+    const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+    useEffect(() => {
+        async function checkAuth() {
+            try {
+                const res = await fetch("/api/subscription");
+                if (res.status === 401) {
+                    setAuthState("unauthenticated");
+                    return;
+                }
+                const data = await res.json();
+                if (data.success && data.data?.plan === "pro") {
+                    setAuthState("pro");
+                } else {
+                    setAuthState("free");
+                }
+            } catch {
+                setAuthState("unauthenticated");
+            }
+        }
+        checkAuth();
+    }, []);
+
+    async function handleCheckout() {
+        setCheckoutLoading(true);
+        try {
+            const url = await redirectToCheckout();
+            if (!url) {
+                showToast("Could not start checkout. Please try again.", "error");
+                setCheckoutLoading(false);
+                return;
+            }
+            // Reset after 5s in case the redirect is blocked
+            setTimeout(() => setCheckoutLoading(false), 5000);
+        } catch {
+            showToast("Could not start checkout. Please try again.", "error");
+            setCheckoutLoading(false);
+        }
+    }
+
+    function renderFreeButton() {
+        switch (authState) {
+            case "loading":
+                return (
+                    <button disabled className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 font-medium rounded-lg mb-8 cursor-not-allowed">
+                        Loading...
+                    </button>
+                );
+            case "unauthenticated":
+                return (
+                    <button
+                        className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition ease-in-out mb-8"
+                        onClick={() => router.push("/onboarding/communication-channels?plan=free")}
+                    >
+                        Try for Free
+                    </button>
+                );
+            case "free":
+                return (
+                    <button disabled className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg mb-8 cursor-not-allowed opacity-70">
+                        Current Plan
+                    </button>
+                );
+            case "pro":
+                return (
+                    <button disabled className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 font-medium rounded-lg mb-8 cursor-not-allowed">
+                        Free Plan
+                    </button>
+                );
+        }
+    }
+
+    function renderProButton() {
+        switch (authState) {
+            case "loading":
+                return (
+                    <button disabled className="w-full py-3 bg-primary/50 text-white/70 font-medium rounded-lg mb-8 cursor-not-allowed">
+                        Loading...
+                    </button>
+                );
+            case "unauthenticated":
+                return (
+                    <button
+                        className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-green-600 transition ease-in-out mb-8"
+                        onClick={() => router.push("/onboarding/communication-channels?plan=pro")}
+                    >
+                        Subscribe Now
+                    </button>
+                );
+            case "free":
+                return (
+                    <button
+                        className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-green-600 transition ease-in-out mb-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleCheckout}
+                        disabled={checkoutLoading}
+                    >
+                        {checkoutLoading ? "Redirecting..." : "Upgrade to Pro"}
+                    </button>
+                );
+            case "pro":
+                return (
+                    <button disabled className="w-full py-3 bg-white dark:bg-gray-700 text-primary font-medium rounded-lg border-2 border-primary mb-8 cursor-not-allowed">
+                        Current Plan
+                    </button>
+                );
+        }
+    }
+
     return (
         <div className="bg-gray-100 dark:bg-gray-900 min-h-screen">
             {/* Hero Section */}
@@ -77,7 +193,10 @@ export default function PricingPage() {
                     <p className="text-gray-300 text-base sm:text-lg mb-8">
                         Simple, transparent pricing to bring inspiration directly to you.
                     </p>
-                    <button className="px-6 sm:px-8 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition ease-in-out">
+                    <button
+                        className="px-6 sm:px-8 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition ease-in-out"
+                        onClick={() => router.push("/onboarding/communication-channels")}
+                    >
                         Get Started
                     </button>
                 </div>
@@ -93,34 +212,30 @@ export default function PricingPage() {
                             <span className="text-4xl font-bold text-gray-900 dark:text-white">Free</span>
                         </div>
                         <p className="text-green-600 dark:text-primary text-sm mb-6">No credit card required</p>
-                        <button className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition ease-in-out mb-8">
-                            Try for Free
-                        </button>
+                        {renderFreeButton()}
                         <div className="space-y-4">
-                            <CheckItem>First 10 messages free</CheckItem>
+                            <CheckItem>First 5 messages free</CheckItem>
                             <CheckItem>Email delivery</CheckItem>
                             <CheckItem>Basic scheduling</CheckItem>
                         </div>
                     </div>
 
-                    {/* Premium Plan */}
+                    {/* Pro Plan */}
                     <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border-2 border-primary shadow-sm relative">
                         <div className="absolute top-4 right-4">
                             <span className="px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-semibold rounded-full border border-green-200 dark:border-green-700">
                                 Best Value
                             </span>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Premium</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Pro</h3>
                         <div className="mb-2">
                             <span className="text-4xl font-bold text-gray-900 dark:text-white">$1</span>
                             <span className="text-gray-500 dark:text-gray-400 ml-1">/ month</span>
                         </div>
-                        <p className="text-transparent text-sm mb-6">.</p>
-                        <button className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-green-600 transition ease-in-out mb-8">
-                            Subscribe Now
-                        </button>
+                        <p className="text-green-600 dark:text-primary text-sm mb-6 invisible">.</p>
+                        {renderProButton()}
                         <div className="space-y-4">
-                            <CheckItem>Up to 100 messages/month</CheckItem>
+                            <CheckItem>Up to 30 messages/month</CheckItem>
                             <CheckItem>Social media & Email</CheckItem>
                             <CheckItem>Advanced scheduling options</CheckItem>
                             <CheckItem>Priority support</CheckItem>
