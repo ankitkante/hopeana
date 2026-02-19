@@ -1,4 +1,4 @@
-// apps/client/app/api/checkout/route.ts
+// apps/client/app/api/v1/checkout/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { Checkout } from "@dodopayments/nextjs";

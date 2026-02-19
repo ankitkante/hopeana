@@ -75,7 +75,7 @@ types    → packages/types/src
 - Token stored in HTTP-only cookie: `hopeana_token` (7-day expiration)
 - Token payload: `{ userId: string; email: string }`
 - `getUserFromRequest()` (`apps/client/lib/get-user-from-request.ts`) extracts user from request — checks injected headers first, falls back to cookie verification
-- Auth status endpoint: `GET /api/auth/status`
+- Auth status endpoint: `GET /api/v1/auth/status`
 
 ### Dashboard & Settings
 - Dashboard at `/dashboard` — client component, fetches user/subscription/schedules/messageStats via `Promise.all`
@@ -84,7 +84,7 @@ types    → packages/types/src
 - `DashboardHeader` component shared between dashboard and settings (includes avatar dropdown with Settings + Logout)
 - Account deactivation is soft-delete: sets `user.isActive = false` and pauses all schedules (no data deletion)
 - Schedule CRUD: create at `/dashboard/settings/schedules/new`, edit at `/dashboard/settings/schedules/[id]/edit`
-- Single-schedule API: `GET /api/schedules/[id]` (fetch) and `PATCH /api/schedules/[id]` (full update) with ownership verification
+- Single-schedule API: `GET /api/v1/schedules/[id]` (fetch) and `PATCH /api/v1/schedules/[id]` (full update) with ownership verification
 
 ### UI Component Patterns
 - Cards: `bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6`
@@ -150,13 +150,17 @@ Operational scripts live at the repo root in `scripts/`, run via `tsx`. They use
 Package: `@dodopayments/nextjs` (v0.3.4). Handles Pro subscription checkout and webhook lifecycle.
 
 ### Checkout Flow
-- **Route**: `GET /api/checkout` ([apps/client/app/api/checkout/route.ts](apps/client/app/api/checkout/route.ts))
+- **Route**: `GET /api/v1/checkout` ([apps/client/app/api/v1/checkout/route.ts](apps/client/app/api/v1/checkout/route.ts))
+- **Pending placeholder**: before redirecting, creates a `pending_${correlationId}` Payment row; the webhook resolves it via `metadata.correlation_id`
 - Auth-gated: requires valid session cookie, returns 401 JSON if unauthenticated
 - Server enforces `productId`, `quantity=1`, and `email` from session — all client query params are stripped (tamper-proof)
 - Uses `Checkout` adapter from `@dodopayments/nextjs` in "static" mode
 - Returns `{ checkout_url: "https://checkout.dodopayments.com/..." }` — client redirects user there
 - Product ID: prefers `DODO_PRO_PRODUCT_ID` (server-only), falls back to `NEXT_PUBLIC_DODO_PRO_PRODUCT_ID`
-- Client helper: `lib/checkout.ts` — `redirectToCheckout()` calls `fetch('/api/checkout')` with no params, checks `res.ok`
+- Client helper: `lib/checkout.ts` — `redirectToCheckout()` calls `fetch('/api/v1/checkout')` with no params, checks `res.ok`
+- **Return URL** (`DODO_PAYMENTS_RETURN_URL`): should point to `/onboarding/status`. That page polls `GET /api/v1/payments?status=pending&limit=1` to detect webhook arrival, then shows `pro_success` / `payment_failed` states
+- **Cleanup**: `netlify/functions/cleanup-abandoned-checkouts.ts` runs daily at 2 AM UTC — marks `pending_*` Payment rows older than 48 h as `"abandoned"`
+- **Payments API**: `GET /api/v1/payments` — returns paginated payment records for the authenticated user; supports `status`, `limit`, `page` query params
 
 ### Webhook Flow
 - **Route**: `POST /api/webhook/dodo-payments` ([apps/client/app/api/webhook/dodo-payments/route.ts](apps/client/app/api/webhook/dodo-payments/route.ts))
