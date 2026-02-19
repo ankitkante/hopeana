@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
+import { PaymentStatus } from "@prisma/client";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
 
 // GET /api/payments
@@ -29,7 +30,10 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
 
-  const status = searchParams.get("status") ?? undefined;
+  const statusParam = searchParams.get("status");
+  const status = statusParam && Object.values(PaymentStatus).includes(statusParam as PaymentStatus)
+    ? (statusParam as PaymentStatus)
+    : undefined;
   const limit = Math.min(Math.max(parseInt(searchParams.get("limit") ?? "20", 10), 1), 100);
   const page = Math.max(parseInt(searchParams.get("page") ?? "1", 10), 1);
   const offset = (page - 1) * limit;

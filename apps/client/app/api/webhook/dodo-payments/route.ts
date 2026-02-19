@@ -1,6 +1,7 @@
 // apps/client/app/api/webhook/dodo-payments/route.ts
 import { Webhooks } from "@dodopayments/nextjs";
 import { prisma } from "db";
+import { PaymentStatus } from "@prisma/client";
 
 /**
  * Dodo Payments verified webhook handler.
@@ -155,7 +156,7 @@ async function upsertPayment(opts: {
   customerEmail: string;
   amount: number;
   currency: string;
-  status: string;
+  status: PaymentStatus;
   failureReason?: string;
   rawPayload: string;
   correlationId?: string;
