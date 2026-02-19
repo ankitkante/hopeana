@@ -67,12 +67,12 @@ function StatusContent() {
                     // While the synthetic "pending" record exists, the webhook hasn't fired yet.
                     // Once the webhook fires it resolves the synthetic record (updates its status),
                     // so status=pending returns empty — then we fetch the real payment result.
-                    const pendingRes = await fetch("/api/payments?status=pending&limit=1");
+                    const pendingRes = await fetch("/api/v1/payments?status=pending&limit=1");
                     if (pendingRes.ok) {
                         const pendingData = await pendingRes.json();
                         if (pendingData.success && pendingData.data?.payments?.length === 0) {
                             // No more pending → webhook fired, fetch the result
-                            const resultRes = await fetch("/api/payments?limit=1");
+                            const resultRes = await fetch("/api/v1/payments?limit=1");
                             if (resultRes.ok) {
                                 const resultData = await resultRes.json();
                                 const latest = resultData.data?.payments?.[0];

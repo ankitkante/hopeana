@@ -5,7 +5,7 @@
 export async function redirectToCheckout(): Promise<string | null> {
   // Security: do not allow client to control productId/quantity.
   // The server-side /checkout handler will enforce the correct product and quantity.
-  const res = await fetch(`/api/checkout`, {
+  const res = await fetch(`/api/v1/checkout`, {
     method: "GET",
     headers: { Accept: "application/json" },
   });
