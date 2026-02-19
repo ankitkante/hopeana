@@ -1,9 +1,13 @@
 "use client"
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import ChannelSelector from "./ChannelSelector";
 
-export default function SelectCommunicationChannel() {
+function SelectCommunicationChannelInner() {
+    const searchParams = useSearchParams();
+    const plan = searchParams.get("plan") as "free" | "pro" | null;
+
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const channelOptions = [
@@ -74,8 +78,17 @@ export default function SelectCommunicationChannel() {
                     defaultSelection="email"
                     firstName={firstName}
                     lastName={lastName}
+                    plan={plan || undefined}
                 />
             </main>
         </div>
     )
+}
+
+export default function SelectCommunicationChannel() {
+    return (
+        <Suspense>
+            <SelectCommunicationChannelInner />
+        </Suspense>
+    );
 }

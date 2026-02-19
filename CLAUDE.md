@@ -55,7 +55,8 @@ types    → packages/types/src
 
 ### Database Models
 - **User** - Account info with social login support
-- **Subscription** - Plan tracking (free trial = 5 messages, pro = 30/month)
+- **Subscription** - Plan tracking (free trial = 5 messages, pro = 30/month). Fields: `plan`, `status`, `messageLimit`, `messagesUsed`, `gatewaySubscriptionId`, `cancelAtPeriodEnd`, `billingDate`
+- **Payment** - Audit trail for payment gateway webhook events. Upserted by `gatewayPaymentId` (unique, idempotency key). Fields: `gatewaySubscriptionId`, `gatewayCustomerId`, `customerEmail`, `amount` (smallest currency unit), `currency`, `status`, `failureReason`, `rawPayload`
 - **Schedule** - Delivery preferences (channel, frequency, timezone)
 - **SentMessage** - Delivery tracking with status
 - **QuotesBank** - Repository of motivational quotes
@@ -144,6 +145,41 @@ Operational scripts live at the repo root in `scripts/`, run via `tsx`. They use
 - **`test-scheduler.ts`** — Locally invokes `sendDueEmails()` to test the scheduled email pipeline end-to-end. Loads env from `apps/client/.env.local`. Run: `pnpm test:scheduler`
 - **`data/quotes.json`** — Quote data file. Add/remove entries here to manage the quote bank.
 
+## Dodo Payments (Payment Gateway)
+
+Package: `@dodopayments/nextjs` (v0.3.4). Handles Pro subscription checkout and webhook lifecycle.
+
+### Checkout Flow
+- **Route**: `GET /api/checkout` ([apps/client/app/api/checkout/route.ts](apps/client/app/api/checkout/route.ts))
+- Auth-gated: requires valid session cookie, returns 401 JSON if unauthenticated
+- Server enforces `productId`, `quantity=1`, and `email` from session — all client query params are stripped (tamper-proof)
+- Uses `Checkout` adapter from `@dodopayments/nextjs` in "static" mode
+- Returns `{ checkout_url: "https://checkout.dodopayments.com/..." }` — client redirects user there
+- Product ID: prefers `DODO_PRO_PRODUCT_ID` (server-only), falls back to `NEXT_PUBLIC_DODO_PRO_PRODUCT_ID`
+- Client helper: `lib/checkout.ts` — `redirectToCheckout()` calls `fetch('/api/checkout')` with no params, checks `res.ok`
+
+### Webhook Flow
+- **Route**: `POST /api/webhook/dodo-payments` ([apps/client/app/api/webhook/dodo-payments/route.ts](apps/client/app/api/webhook/dodo-payments/route.ts))
+- Uses `Webhooks` adapter with signature verification via `DODO_PAYMENTS_WEBHOOK_SECRET` (adapter property: `webhookKey`)
+- Matches users by `payload.data.customer.email` from webhook payload → looks up `User` by email
+- **Webhook payload structure**: `payload.data` is the entity itself (flat), NOT `payload.data.subscription` — access fields as `payload.data.subscription_id`, `payload.data.customer.email`, etc.
+- **Vendor-agnostic naming**: all DB fields use `gateway*` prefix (e.g., `gatewayPaymentId`, `gatewaySubscriptionId`) — not tied to Dodo
+- **Subscription events handled**:
+  - `subscription.active` → upsert Subscription: plan="pro", status="active", messageLimit=30. Idempotent: `messagesUsed` only set to 0 on create (not on update/retry)
+  - `subscription.renewed` → same as active but resets `messagesUsed=0` (new billing cycle)
+  - `subscription.cancelled` → checks `cancel_at_next_billing_date`: if true, sets `cancelAtPeriodEnd=true` (keeps status active); if false, sets status="cancelled"
+  - `subscription.failed` → set status="failed"
+  - `subscription.expired` → set status="expired" (fires after cancel-at-period-end expires)
+- **Payment events handled**:
+  - `payment.succeeded` → upsert Payment row with status="succeeded", links to user and subscription
+  - `payment.failed` → upsert Payment row with status="failed", parses `failureReason` from multiple payload fields (truncated to 512 chars)
+  - Both use `gatewayPaymentId` as unique idempotency key — safe for webhook retries
+
+### Monthly Message Cap Enforcement
+- `canSendAnotherEmail()` in `packages/core/src/send-due-emails.ts` checks `messagesUsed < messageLimit` and that status is not cancelled/failed/expired
+- `incrementUsage()` upserts Subscription row after each successful email send (creates free-tier row if none exists)
+- Free tier: 5 messages/month (default). Pro tier: 30 messages/month (set by webhook on activation/renewal, resets `messagesUsed` to 0)
+
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection string (required by db package)
 - `JWT_SECRET` - Secret key for signing/verifying JWT auth tokens (used by `apps/client/lib/auth.ts`)
@@ -153,3 +189,9 @@ Operational scripts live at the repo root in `scripts/`, run via `tsx`. They use
 - `HOPEANA_REPLY_TO_EMAIL` - Reply-to address for outgoing emails
 - `QUOTE_EMAIL_TEMPLATE_ID` - Template ID for the scheduled quote email
 - `QUOTE_FROM_EMAIL` - Sender address for quote emails (can reuse `WELCOME_FROM_EMAIL`)
+- `DODO_PAYMENTS_API_KEY` - Dodo Payments API key (server-only)
+- `DODO_PAYMENTS_WEBHOOK_SECRET` - Webhook signature verification secret (server-only)
+- `DODO_PAYMENTS_RETURN_URL` - Post-checkout redirect URL (e.g., `https://hopeana.com/dashboard`)
+- `DODO_PAYMENTS_ENVIRONMENT` - `"test_mode"` or `"live_mode"`
+- `DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (server-only, preferred by checkout route)
+- `NEXT_PUBLIC_DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (client-side fallback)

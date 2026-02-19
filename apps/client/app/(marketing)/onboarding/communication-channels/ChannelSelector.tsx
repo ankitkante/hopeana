@@ -14,6 +14,7 @@ export default function ChannelSelector({
     defaultSelection,
     firstName,
     lastName,
+    plan,
 }: {
     options: Array<{
         label: string;
@@ -25,6 +26,7 @@ export default function ChannelSelector({
     defaultSelection?: string;
     firstName?: string;
     lastName?: string;
+    plan?: "free" | "pro";
 }) {
     const ctx = useContext(OnboardingContext);
     if (!ctx) throw new Error("OnboardingContext missing");
@@ -54,6 +56,7 @@ export default function ChannelSelector({
         setOnboardingData((prev) => {
             return {
                 ...prev,
+                plan: plan || prev.plan,
                 firstName,
                 lastName,
                 channelData: {
