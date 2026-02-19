@@ -46,7 +46,7 @@ export default function PersonalInfoPage() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await fetch("/api/user");
+        const res = await fetch("/api/v1/user");
         if (!res.ok) throw new Error("Failed to load user");
         const data = await res.json();
         setUser(data.data);
@@ -67,7 +67,7 @@ export default function PersonalInfoPage() {
     setSaving(true);
     setSaveMessage(null);
     try {
-      const res = await fetch("/api/user", {
+      const res = await fetch("/api/v1/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -90,7 +90,7 @@ export default function PersonalInfoPage() {
   async function handleDeactivate() {
     setIsDeactivating(true);
     try {
-      const res = await fetch("/api/user/deactivate", { method: "POST" });
+      const res = await fetch("/api/v1/user/deactivate", { method: "POST" });
       if (!res.ok) throw new Error("Failed to deactivate");
       router.push("/");
     } catch {

@@ -11,7 +11,7 @@ export default function Header() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        fetch("/api/auth/status")
+        fetch("/api/v1/auth/status")
             .then((res) => res.json())
             .then((data) => setIsAuthenticated(data.authenticated === true))
             .catch(() => setIsAuthenticated(false));
