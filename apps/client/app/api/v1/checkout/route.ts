@@ -4,6 +4,9 @@ import { randomUUID } from "crypto";
 import { Checkout } from "@dodopayments/nextjs";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
 import { prisma } from "db";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:v1:checkout');
 
 const checkoutHandler = Checkout({
   bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
@@ -60,7 +63,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     // Don't block checkout — webhook fallback will still record the payment.
-    console.error("[Checkout] Failed to create pending placeholder:", err);
+    logger.error("Failed to create pending placeholder", { error: err });
   }
 
   url.searchParams.set("productId", productId);

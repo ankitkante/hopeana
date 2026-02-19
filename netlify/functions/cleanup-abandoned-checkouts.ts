@@ -1,5 +1,8 @@
 import type { Config, Context } from "@netlify/functions";
 import { prisma } from "db";
+import { createLogger } from "utils";
+
+const logger = createLogger('netlify:cleanup');
 
 const ABANDONED_AFTER_HOURS = 48;
 
@@ -15,7 +18,7 @@ export default async (_req: Request, _context: Context) => {
     data: { status: "abandoned" },
   });
 
-  console.log(`Cleanup: marked ${result.count} abandoned checkout placeholder(s) (older than ${ABANDONED_AFTER_HOURS}h)`);
+  logger.info("Cleanup complete", { abandoned: result.count, olderThanHours: ABANDONED_AFTER_HOURS });
 
   return new Response(JSON.stringify({ abandoned: result.count }), {
     headers: { "Content-Type": "application/json" },

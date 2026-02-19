@@ -2,6 +2,9 @@
 import { Webhooks } from "@dodopayments/nextjs";
 import { prisma } from "db";
 import { PaymentStatus } from "@prisma/client";
+import { createLogger } from "utils";
+
+const logger = createLogger('webhook:dodo-payments');
 
 /**
  * Dodo Payments verified webhook handler.
@@ -23,7 +26,7 @@ import { PaymentStatus } from "@prisma/client";
 function requireEmail(data: { customer?: { email?: string } }, eventType: string): string {
   const email = data?.customer?.email;
   if (!email) {
-    console.error(`[Dodo Webhook] Missing customer email in ${eventType} payload`);
+    logger.error("Missing customer email in payload", { eventType });
     throw new Error(`Missing customer email in ${eventType}`);
   }
   return email;
@@ -33,9 +36,9 @@ function requireEmail(data: { customer?: { email?: string } }, eventType: string
 async function findUserByEmail(email: string) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
-    console.warn("[Dodo Webhook] No local user for email:", email);
+    logger.warn("No local user for email", { email });
   } else {
-    console.log("[Dodo Webhook] Matched user:", user.id, "for email:", email);
+    logger.debug("Matched user", { userId: user.id, email });
   }
   return user;
 }
@@ -68,7 +71,7 @@ async function activateProSubscription(email: string, gatewaySubscriptionId?: st
       billingDate: nextBillingDate ?? undefined,
     },
   });
-  console.log("[Dodo Webhook] Subscription upgraded to Pro for user:", user.id);
+  logger.info("Subscription upgraded to Pro", { userId: user.id });
 }
 
 /**
@@ -98,7 +101,7 @@ async function renewProSubscription(email: string, gatewaySubscriptionId?: strin
       billingDate: nextBillingDate ?? undefined,
     },
   });
-  console.log("[Dodo Webhook] Subscription renewed (usage reset to 0) for user:", user.id);
+  logger.info("Subscription renewed", { userId: user.id });
 }
 
 /** Update subscription status (cancelled, failed, etc.). No-op if no subscription row exists. */
@@ -111,9 +114,9 @@ async function setSubscriptionStatus(email: string, status: "cancelled" | "faile
       where: { userId: user.id },
       data: { status, cancelAtPeriodEnd: false },
     });
-    console.log("[Dodo Webhook] Subscription status →", status, "for user:", user.id);
+    logger.info("Subscription status updated", { status, userId: user.id });
   } catch {
-    console.warn("[Dodo Webhook] No existing subscription row to update for status", status, "user:", user.id);
+    logger.warn("No existing subscription row to update", { status, userId: user.id });
   }
 }
 
@@ -134,9 +137,9 @@ async function markCancelAtPeriodEnd(email: string, billingDate?: Date | null) {
         billingDate: billingDate ?? undefined,
       },
     });
-    console.log("[Dodo Webhook] cancelAtPeriodEnd set for user:", user.id);
+    logger.info("cancelAtPeriodEnd set", { userId: user.id });
   } catch {
-    console.warn("[Dodo Webhook] No existing subscription row for cancelAtPeriodEnd, user:", user.id);
+    logger.warn("No existing subscription row for cancelAtPeriodEnd", { userId: user.id });
   }
 }
 
@@ -187,7 +190,7 @@ async function upsertPayment(opts: {
         where: { id: placeholder.id },
         data: paymentData,
       });
-      console.log("[Dodo Webhook] Placeholder updated → real payment:", opts.gatewayPaymentId, "status:", opts.status, "user:", user?.id ?? "unknown");
+      logger.info("Placeholder updated to real payment", { paymentId: opts.gatewayPaymentId, status: opts.status, userId: user?.id ?? "unknown" });
       return;
     }
   }
@@ -203,14 +206,14 @@ async function upsertPayment(opts: {
       userId: user?.id ?? undefined,
     },
   });
-  console.log("[Dodo Webhook] Payment upserted (retry/no-correlation):", opts.gatewayPaymentId, "status:", opts.status, "user:", user?.id ?? "unknown");
+  logger.info("Payment upserted", { paymentId: opts.gatewayPaymentId, status: opts.status, userId: user?.id ?? "unknown" });
 }
 
 export const POST = Webhooks({
   webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_SECRET!,
 
   onPayload: async (payload) => {
-    console.log("[Dodo Webhook] event:", payload.type);
+    logger.debug("Webhook event received", { type: payload.type });
   },
 
   // ── Payment events ──
@@ -218,11 +221,11 @@ export const POST = Webhooks({
   onPaymentSucceeded: async (payload) => {
     try {
       const data = payload.data;
-      console.log("[Dodo Webhook] Processing payment.succeeded:", data.payment_id);
+      logger.debug("Processing payment.succeeded", { paymentId: data.payment_id });
       const email = requireEmail(data, "payment.succeeded");
 
       if (!data?.payment_id) {
-        console.error("[Dodo Webhook] payment.succeeded missing payment_id");
+        logger.error("payment.succeeded missing payment_id");
         throw new Error("payment.succeeded missing payment_id");
       }
 
@@ -240,9 +243,9 @@ export const POST = Webhooks({
         correlationId,
       });
 
-      console.log("[Dodo Webhook] payment.succeeded:", data.payment_id, "email:", email);
+      logger.info("payment.succeeded", { paymentId: data.payment_id, email });
     } catch (err) {
-      console.error("[Dodo Webhook] payment.succeeded handler error:", err);
+      logger.error("payment.succeeded handler error", { error: err });
       throw err;
     }
   },
@@ -250,11 +253,11 @@ export const POST = Webhooks({
   onPaymentFailed: async (payload) => {
     try {
       const data = payload.data;
-      console.log("[Dodo Webhook] Processing payment.failed:", data.payment_id);
+      logger.debug("Processing payment.failed", { paymentId: data.payment_id });
       const email = requireEmail(data, "payment.failed");
 
       if (!data?.payment_id) {
-        console.error("[Dodo Webhook] payment.failed missing payment_id");
+        logger.error("payment.failed missing payment_id");
         throw new Error("payment.failed missing payment_id");
       }
 
@@ -304,9 +307,9 @@ export const POST = Webhooks({
         correlationId,
       });
 
-      console.warn("[Dodo Webhook] payment.failed:", data.payment_id, "email:", email);
+      logger.warn("payment.failed", { paymentId: data.payment_id, email });
     } catch (err) {
-      console.error("[Dodo Webhook] payment.failed handler error:", err);
+      logger.error("payment.failed handler error", { error: err });
       throw err;
     }
   },
@@ -316,14 +319,14 @@ export const POST = Webhooks({
   onSubscriptionActive: async (payload) => {
     try {
       const data = payload.data;
-      console.log("[Dodo Webhook] Processing subscription.active:", data.subscription_id);
+      logger.debug("Processing subscription.active", { subscriptionId: data.subscription_id });
       const email = requireEmail(data, "subscription.active");
 
       await activateProSubscription(email, data.subscription_id, data.next_billing_date ? new Date(data.next_billing_date) : null);
 
-      console.log("[Dodo Webhook] subscription.active:", data.subscription_id, "email:", email);
+      logger.info("subscription.active", { subscriptionId: data.subscription_id, email });
     } catch (err) {
-      console.error("[Dodo Webhook] subscription.active handler error:", err);
+      logger.error("subscription.active handler error", { error: err });
       throw err;
     }
   },
@@ -331,14 +334,14 @@ export const POST = Webhooks({
   onSubscriptionRenewed: async (payload) => {
     try {
       const data = payload.data;
-      console.log("[Dodo Webhook] Processing subscription.renewed:", data.subscription_id);
+      logger.debug("Processing subscription.renewed", { subscriptionId: data.subscription_id });
       const email = requireEmail(data, "subscription.renewed");
 
       await renewProSubscription(email, data.subscription_id, data.next_billing_date ? new Date(data.next_billing_date) : null);
 
-      console.log("[Dodo Webhook] subscription.renewed:", data.subscription_id, "email:", email);
+      logger.info("subscription.renewed", { subscriptionId: data.subscription_id, email });
     } catch (err) {
-      console.error("[Dodo Webhook] subscription.renewed handler error:", err);
+      logger.error("subscription.renewed handler error", { error: err });
       throw err;
     }
   },
@@ -346,7 +349,7 @@ export const POST = Webhooks({
   onSubscriptionCancelled: async (payload) => {
     try {
       const data = payload.data;
-      console.log("[Dodo Webhook] Processing subscription.cancelled:", data.subscription_id);
+      logger.debug("Processing subscription.cancelled", { subscriptionId: data.subscription_id });
       const email = requireEmail(data, "subscription.cancelled");
 
       // If the gateway indicates cancel-at-period-end, keep the user active until expiry
@@ -354,13 +357,13 @@ export const POST = Webhooks({
 
       if (cancelAtEnd) {
         await markCancelAtPeriodEnd(email, data.next_billing_date ? new Date(data.next_billing_date) : null);
-        console.log("[Dodo Webhook] subscription.cancelled (at period end):", data.subscription_id, "email:", email);
+        logger.info("subscription.cancelled (at period end)", { subscriptionId: data.subscription_id, email });
       } else {
         await setSubscriptionStatus(email, "cancelled");
-        console.warn("[Dodo Webhook] subscription.cancelled (immediate):", data.subscription_id, "email:", email);
+        logger.warn("subscription.cancelled (immediate)", { subscriptionId: data.subscription_id, email });
       }
     } catch (err) {
-      console.error("[Dodo Webhook] subscription.cancelled handler error:", err);
+      logger.error("subscription.cancelled handler error", { error: err });
       throw err;
     }
   },
@@ -368,14 +371,14 @@ export const POST = Webhooks({
   onSubscriptionFailed: async (payload) => {
     try {
       const data = payload.data;
-      console.log("[Dodo Webhook] Processing subscription.failed:", data.subscription_id);
+      logger.debug("Processing subscription.failed", { subscriptionId: data.subscription_id });
       const email = requireEmail(data, "subscription.failed");
 
       await setSubscriptionStatus(email, "failed");
 
-      console.warn("[Dodo Webhook] subscription.failed:", data.subscription_id, "email:", email);
+      logger.warn("subscription.failed", { subscriptionId: data.subscription_id, email });
     } catch (err) {
-      console.error("[Dodo Webhook] subscription.failed handler error:", err);
+      logger.error("subscription.failed handler error", { error: err });
       throw err;
     }
   },
@@ -383,14 +386,14 @@ export const POST = Webhooks({
   onSubscriptionExpired: async (payload) => {
     try {
       const data = payload.data;
-      console.log("[Dodo Webhook] Processing subscription.expired:", data.subscription_id);
+      logger.debug("Processing subscription.expired", { subscriptionId: data.subscription_id });
       const email = requireEmail(data, "subscription.expired");
 
       await setSubscriptionStatus(email, "expired");
 
-      console.warn("[Dodo Webhook] subscription.expired:", data.subscription_id, "email:", email);
+      logger.warn("subscription.expired", { subscriptionId: data.subscription_id, email });
     } catch (err) {
-      console.error("[Dodo Webhook] subscription.expired handler error:", err);
+      logger.error("subscription.expired handler error", { error: err });
       throw err;
     }
   },
