@@ -198,4 +198,4 @@ Package: `@dodopayments/nextjs` (v0.3.4). Handles Pro subscription checkout and 
 - `DODO_PAYMENTS_RETURN_URL` - Post-checkout redirect URL (e.g., `https://hopeana.com/dashboard`)
 - `DODO_PAYMENTS_ENVIRONMENT` - `"test_mode"` or `"live_mode"`
 - `DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (server-only, preferred by checkout route)
-- `NEXT_PUBLIC_DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (client-side fallback)
+- `NEXT_PUBLIC_DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (public — safe to expose, product IDs are public identifiers; used as client-side fallback)
