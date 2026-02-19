@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:quotes');
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest) {
       data: quote,
     });
   } catch (error) {
-    console.error("GET /api/quotes/random error:", error);
+    logger.error("GET /api/quotes/random error", { error });
     return NextResponse.json(
       { success: false, error: "Failed to fetch random quote" },
       { status: 500 }

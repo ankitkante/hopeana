@@ -1,17 +1,23 @@
 import type { Config, Context } from "@netlify/functions";
 import { sendDueEmails } from "core";
+import { createLogger } from "utils";
+
+const logger = createLogger('netlify:scheduler');
 
 export default async (req: Request, context: Context) => {
-  console.log("Running scheduled email send...");
+  logger.info("Scheduled email run started");
 
   const result = await sendDueEmails();
 
-  console.log(
-    `Done: ${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped, ${result.remaining} remaining for next hour`
-  );
+  logger.info("Scheduled email run complete", {
+    sent: result.sent,
+    failed: result.failed,
+    skipped: result.skipped,
+    remaining: result.remaining,
+  });
 
   if (result.errors.length > 0) {
-    console.error("Errors:", result.errors);
+    logger.error("Scheduled email run errors", { errors: result.errors });
   }
 
   return new Response(JSON.stringify(result), {

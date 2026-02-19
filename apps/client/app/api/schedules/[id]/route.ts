@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:schedules:id');
 
 export async function GET(
   request: NextRequest,
@@ -36,7 +39,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: schedule });
   } catch (error) {
-    console.error("GET /api/schedules/[id] error:", error);
+    logger.error("GET /api/schedules/[id] error", { error });
     return NextResponse.json({ success: false, error: "Failed to fetch schedule" }, { status: 500 });
   }
 }
@@ -90,7 +93,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
-    console.error("PATCH /api/schedules/[id] error:", error);
+    logger.error("PATCH /api/schedules/[id] error", { error });
     return NextResponse.json({ success: false, error: "Failed to update schedule" }, { status: 500 });
   }
 }

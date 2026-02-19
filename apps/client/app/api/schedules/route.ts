@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:schedules');
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GET /api/schedules error:", error);
+    logger.error("GET /api/schedules error", { error });
     return NextResponse.json({ success: false, error: "Failed to fetch schedules" }, { status: 500 });
   }
 }
@@ -75,7 +78,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
-    console.error("PATCH /api/schedules error:", error);
+    logger.error("PATCH /api/schedules error", { error });
     return NextResponse.json({ success: false, error: "Failed to update schedule" }, { status: 500 });
   }
 }
@@ -103,7 +106,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE /api/schedules error:", error);
+    logger.error("DELETE /api/schedules error", { error });
     return NextResponse.json({ success: false, error: "Failed to delete schedule" }, { status: 500 });
   }
 }
@@ -148,7 +151,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: schedule }, { status: 201 });
   } catch (error) {
-    console.error("POST /api/schedules error:", error);
+    logger.error("POST /api/schedules error", { error });
     return NextResponse.json({ success: false, error: "Failed to create schedule" }, { status: 500 });
   }
 }
