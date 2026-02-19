@@ -59,7 +59,7 @@ export default function EditSchedulePage() {
   useEffect(() => {
     async function fetchSchedule() {
       try {
-        const res = await fetch(`/api/schedules/${scheduleId}`);
+        const res = await fetch(`/api/v1/schedules/${scheduleId}`);
         if (!res.ok) {
           setNotFound(true);
           return;
@@ -99,7 +99,7 @@ export default function EditSchedulePage() {
     setError(null);
 
     try {
-      const res = await fetch(`/api/schedules/${scheduleId}`, {
+      const res = await fetch(`/api/v1/schedules/${scheduleId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

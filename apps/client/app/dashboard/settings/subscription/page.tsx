@@ -25,7 +25,7 @@ export default function SubscriptionPage() {
   useEffect(() => {
     async function fetchSubscription() {
       try {
-        const res = await fetch("/api/subscription");
+        const res = await fetch("/api/v1/subscription");
         if (res.ok) {
           const data = await res.json();
           setSubscription(data.data);

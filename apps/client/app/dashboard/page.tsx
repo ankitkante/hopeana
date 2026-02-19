@@ -59,10 +59,10 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       try {
         const [userRes, subRes, schedRes, msgRes] = await Promise.all([
-          fetch("/api/user"),
-          fetch("/api/subscription"),
-          fetch("/api/schedules"),
-          fetch("/api/messages/stats"),
+          fetch("/api/v1/user"),
+          fetch("/api/v1/subscription"),
+          fetch("/api/v1/schedules"),
+          fetch("/api/v1/messages/stats"),
         ]);
 
         if (!userRes.ok) throw new Error("Failed to load user data");

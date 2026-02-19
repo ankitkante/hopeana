@@ -71,7 +71,7 @@ export default function NewSchedulePage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/schedules", {
+      const res = await fetch("/api/v1/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -27,7 +27,7 @@ export default function AvatarDropdown({ firstName, plan }: AvatarDropdownProps)
   }, []);
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/v1/auth/logout", { method: "POST" });
     router.push("/login");
   }
 

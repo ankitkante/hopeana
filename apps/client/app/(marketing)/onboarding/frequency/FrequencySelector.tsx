@@ -173,7 +173,7 @@ export default function FrequencySelector() {
         setError(null);
 
         try {
-            const res = await fetch('/api/onboarding', {
+            const res = await fetch('/api/v1/onboarding', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
