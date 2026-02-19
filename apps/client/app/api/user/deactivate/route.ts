@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
 import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:user:deactivate');
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("POST /api/user/deactivate error:", error);
+    logger.error("POST /api/user/deactivate error", { error });
     return NextResponse.json({ success: false, error: "Failed to deactivate account" }, { status: 500 });
   }
 }

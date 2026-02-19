@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:user');
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: user });
   } catch (error) {
-    console.error("GET /api/user error:", error);
+    logger.error("GET /api/user error", { error });
     return NextResponse.json({ success: false, error: "Failed to fetch user" }, { status: 500 });
   }
 }
@@ -53,7 +56,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: user });
   } catch (error) {
-    console.error("PATCH /api/user error:", error);
+    logger.error("PATCH /api/user error", { error });
     return NextResponse.json({ success: false, error: "Failed to update user" }, { status: 500 });
   }
 }

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:messages:stats');
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,7 +59,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GET /api/messages/stats error:", error);
+    logger.error("GET /api/messages/stats error", { error });
     return NextResponse.json(
       { success: false, error: "Failed to fetch message stats" },
       { status: 500 }
