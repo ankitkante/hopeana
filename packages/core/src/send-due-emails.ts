@@ -33,7 +33,11 @@ async function canSendAnotherEmail(userId: string): Promise<boolean> {
   }
   const limit = sub.messageLimit ?? DEFAULT_FREE_MONTHLY_LIMIT;
   const used = sub.messagesUsed ?? 0;
-  return used < limit && sub.status !== "cancelled" && sub.status !== "failed" && sub.status !== "expired";
+  const allowed = used < limit && sub.status !== "cancelled" && sub.status !== "failed" && sub.status !== "expired";
+  if (!allowed) {
+    logger.debug("Monthly cap reached, skipping user", { userId, used, limit, status: sub.status });
+  }
+  return allowed;
 }
 
 /**

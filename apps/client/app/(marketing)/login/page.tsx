@@ -35,7 +35,6 @@ export default function LoginPage() {
     const onSubmit = async (data: LoginFormData) => {
         setIsSubmitting(true);
         // TODO: Implement actual login logic
-        console.log("Login attempt:", data);
 
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
