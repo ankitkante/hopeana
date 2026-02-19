@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "db": "workspace:*",
+    "utils": "workspace:*",
     "autosendjs": "^1.0.1"
   }
 }

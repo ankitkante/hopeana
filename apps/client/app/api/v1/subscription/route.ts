@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:subscription');
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +43,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GET /api/subscription error:", error);
+    logger.error("GET /api/subscription error", { error });
     return NextResponse.json({ success: false, error: "Failed to fetch subscription" }, { status: 500 });
   }
 }

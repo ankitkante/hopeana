@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
 import { Autosend, type SendEmailOptions } from 'autosendjs';
 import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { createLogger } from "utils";
+
+const logger = createLogger('api:onboarding');
 
 // POST /api/onboarding - Create a new user with their initial schedule
 export async function POST(request: NextRequest) {
@@ -88,20 +91,20 @@ export async function POST(request: NextRequest) {
           currentYear: new Date().getFullYear().toString(),
         },
       };
-      console.log("Sending welcome email with payload:", JSON.stringify(emailPayload, null, 2));
+      logger.debug("Sending welcome email", { to: user.email, templateId: emailPayload.templateId });
 
       const emailResponse = await autosend.emails.send(emailPayload);
-      console.log("Autosend response:", JSON.stringify(emailResponse, null, 2));
+      logger.debug("Autosend response", { response: emailResponse });
 
       if (emailResponse?.success) {
         emailId = emailResponse?.data?.emailId ?? null;
-        console.log(`Email sent successfully with ID: ${emailId}`);
+        logger.info("Welcome email sent", { emailId, userId: user.id });
       } else {
         emailSent = false;
-        console.error("Autosend returned success: false", emailResponse);
+        logger.error("Autosend returned success: false", { response: emailResponse });
       }
     } catch (emailError) {
-      console.error("Failed to send welcome email:", emailError);
+      logger.error("Failed to send welcome email", { error: emailError });
       emailSent = false;
     }
 
@@ -126,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Onboarding error:", error);
+    logger.error("POST /api/onboarding error", { error });
     return NextResponse.json(
       { success: false, error: "Failed to complete onboarding" },
       { status: 500 }
@@ -177,7 +180,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error checking onboarding status:", error);
+    logger.error("GET /api/onboarding error", { error });
     return NextResponse.json(
       { success: false, error: "Failed to check onboarding status" },
       { status: 500 }

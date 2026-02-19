@@ -1,6 +1,9 @@
 import { prisma, type Schedule } from "db";
 import { Autosend, type BulkSendEmailOptions, type BulkRecipient } from "autosendjs";
 import { isScheduleDue, isInPreferredWindow } from "./is-schedule-due";
+import { createLogger } from "utils";
+
+const logger = createLogger('core:send-due-emails');
 
 /** Cron interval in minutes. Used to calculate available slots in a window. */
 const CRON_INTERVAL_MIN = 15;
@@ -99,6 +102,7 @@ export async function sendDueEmails(): Promise<SendResult> {
   });
 
   if (quotes.length === 0) {
+    logger.error("No active quotes found in QuotesBank");
     result.errors.push("No active quotes found in QuotesBank");
     return result;
   }
@@ -112,6 +116,13 @@ export async function sendDueEmails(): Promise<SendResult> {
   });
 
   result.skipped = schedules.length - dueSchedules.length;
+
+  logger.info("Schedules evaluated", {
+    total: schedules.length,
+    due: dueSchedules.length,
+    skipped: result.skipped,
+    quotes: quotes.length,
+  });
 
   // 4. Shuffle for fairness, then stable-sort so in-window emails
   //    still go before overflow — but within each group the order is random.
@@ -128,6 +139,8 @@ export async function sendDueEmails(): Promise<SendResult> {
   const batch = dueSchedules.slice(0, batchSize);
   result.remaining = Math.max(0, dueSchedules.length - batchSize);
 
+  logger.info("Batch selected", { batchSize, remaining: result.remaining });
+
   // 6. Prepare recipients (pick a unique quote per user)
   const prepared: { schedule: typeof batch[number]; quote: { id: string; content: string; author: string | null }; recipient: BulkRecipient }[] = [];
 
@@ -142,6 +155,7 @@ export async function sendDueEmails(): Promise<SendResult> {
     const quote = await pickQuote(schedule.userId, quotes.map((q) => q.id));
 
     if (!quote) {
+      logger.warn("No unsent quotes available for user", { userId: schedule.userId });
       result.errors.push(`No unsent quotes available for user ${schedule.userId}`);
       result.failed++;
       continue;
@@ -186,6 +200,7 @@ export async function sendDueEmails(): Promise<SendResult> {
 
       if (bulkResponse.success) {
         result.sent += chunk.length;
+        logger.info("Bulk chunk sent", { count: chunk.length, totalSent: result.sent });
         for (const item of chunk) {
           await prisma.sentMessage.create({
             data: {
@@ -201,9 +216,9 @@ export async function sendDueEmails(): Promise<SendResult> {
         }
       } else {
         result.failed += chunk.length;
-        result.errors.push(
-          `Bulk send failed for ${chunk.length} emails: ${typeof bulkResponse.error === "object" ? JSON.stringify(bulkResponse.error) : bulkResponse.error || "unknown error"}`
-        );
+        const errMsg = `Bulk send failed for ${chunk.length} emails: ${typeof bulkResponse.error === "object" ? JSON.stringify(bulkResponse.error) : bulkResponse.error || "unknown error"}`;
+        logger.error("Bulk chunk failed", { count: chunk.length, error: bulkResponse.error });
+        result.errors.push(errMsg);
         for (const item of chunk) {
           try {
             await prisma.sentMessage.create({
@@ -223,6 +238,7 @@ export async function sendDueEmails(): Promise<SendResult> {
     } catch (err) {
       result.failed += chunk.length;
       const message = err instanceof Error ? err.message : String(err);
+      logger.error("Bulk chunk error", { count: chunk.length, error: message });
       result.errors.push(
         `Bulk send error for ${chunk.length} emails: ${message}`
       );
@@ -244,6 +260,14 @@ export async function sendDueEmails(): Promise<SendResult> {
       }
     }
   }
+
+  logger.info("Run complete", {
+    sent: result.sent,
+    failed: result.failed,
+    skipped: result.skipped,
+    remaining: result.remaining,
+    errors: result.errors.length,
+  });
 
   return result;
 }
