@@ -44,9 +44,11 @@ export default function AvatarDropdown({ firstName, plan }: AvatarDropdownProps)
           <p className="text-sm font-semibold text-gray-900 dark:text-white">
             {firstName || "User"}
           </p>
+          {/* PAYMENT_DISABLED
           <p className="text-xs text-green-600 dark:text-green-400">
             {plan === "pro" ? "Pro Plan" : "Free Plan"}
           </p>
+          */}
         </div>
       </button>
 

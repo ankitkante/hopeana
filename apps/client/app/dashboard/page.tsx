@@ -12,8 +12,9 @@ import {
 } from "@mdi/js";
 import DashboardHeader from "./components/DashboardHeader";
 import StatCard from "./components/StatCard";
-import UpgradeCard from "./components/UpgradeCard";
-import CurrentPlanCard from "./components/CurrentPlanCard";
+// PAYMENT_DISABLED
+// import UpgradeCard from "./components/UpgradeCard";
+// import CurrentPlanCard from "./components/CurrentPlanCard";
 
 import SentMessagesTable from "./components/SentMessagesTable";
 
@@ -191,14 +192,15 @@ function FreeDashboard({
       {/* Bottom section: Quote + Upgrade */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left side - Sent Messages */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-5">
           <SentMessagesTable />
         </div>
 
-        {/* Right side */}
+        {/* Right side - PAYMENT_DISABLED
         <div className="lg:col-span-2 space-y-6">
           <UpgradeCard />
         </div>
+        */}
       </div>
     </>
   );
@@ -268,14 +270,15 @@ function ProDashboard({
       {/* Bottom section */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left side - Sent Messages */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-5">
           <SentMessagesTable />
         </div>
 
-        {/* Right side */}
+        {/* Right side - PAYMENT_DISABLED
         <div className="lg:col-span-2 space-y-6">
           <CurrentPlanCard billingDate={subscription.billingDate} />
         </div>
+        */}
       </div>
     </>
   );

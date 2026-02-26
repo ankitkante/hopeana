@@ -28,6 +28,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  // PAYMENT_DISABLED
+  return NextResponse.json({}, { status: 404 });
+
   const { searchParams } = new URL(request.url);
 
   const statusParam = searchParams.get("status");
@@ -41,12 +44,14 @@ export async function GET(request: NextRequest) {
   // customerEmail param is supported for flexibility but must match the session email
   // to prevent querying another user's payment records.
   const requestedEmail = searchParams.get("customerEmail");
-  const customerEmail = requestedEmail && requestedEmail === auth.email ? requestedEmail : auth.email;
+  // @ts-expect-error dead code — auth narrowing lost after return
+  const customerEmail = (requestedEmail && requestedEmail === auth.email ? requestedEmail : auth.email) || "";
 
   // Filter by userId OR customerEmail to catch records where userId may be null
   // (can happen when the webhook fires before the user is matched by email).
   const where = {
     OR: [
+      // @ts-expect-error dead code — auth narrowing lost after return
       { userId: auth.userId },
       { customerEmail },
     ],
