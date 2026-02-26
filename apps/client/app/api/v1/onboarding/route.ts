@@ -129,7 +129,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    throw error
     logger.error("POST /api/onboarding error", { error });
     return NextResponse.json(
       { success: false, error: "Failed to complete onboarding" },
