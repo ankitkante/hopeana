@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { usePostHog } from "posthog-js/react";
 
 const loginSchema = yup.object({
     email: yup
@@ -21,6 +22,7 @@ const loginSchema = yup.object({
 type LoginFormData = yup.InferType<typeof loginSchema>;
 
 export default function LoginPage() {
+    const posthog = usePostHog();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const {
@@ -34,6 +36,7 @@ export default function LoginPage() {
 
     const onSubmit = async (data: LoginFormData) => {
         setIsSubmitting(true);
+        posthog.capture("login_attempted", { email: data.email });
         // TODO: Implement actual login logic
 
         // Simulate API call

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePostHog } from "posthog-js/react";
 import Link from "next/link";
 import Icon from "@mdi/react";
 import {
@@ -49,6 +50,7 @@ interface MessageStats {
 }
 
 export default function DashboardPage() {
+  const posthog = usePostHog();
   const [user, setUser] = useState<UserData | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [schedules, setSchedules] = useState<SchedulesData | null>(null);
@@ -79,6 +81,12 @@ export default function DashboardPage() {
         setSubscription(subData.data);
         setSchedules(schedData.data);
         setMessageStats(msgData.data);
+
+        posthog.identify(userData.data.id, {
+          email: userData.data.email,
+          firstName: userData.data.firstName,
+          plan: subData.data?.plan,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
@@ -87,7 +95,7 @@ export default function DashboardPage() {
     }
 
     fetchDashboardData();
-  }, []);
+  }, [posthog]);
 
   if (loading) {
     return <DashboardSkeleton />;

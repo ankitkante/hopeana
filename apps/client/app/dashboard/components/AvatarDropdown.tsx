@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Icon from "@mdi/react";
 import { mdiAccount, mdiCogOutline, mdiLogout } from "@mdi/js";
+import { usePostHog } from "posthog-js/react";
 
 interface AvatarDropdownProps {
   firstName: string | null;
@@ -12,6 +13,7 @@ interface AvatarDropdownProps {
 }
 
 export default function AvatarDropdown({ firstName, plan }: AvatarDropdownProps) {
+  const posthog = usePostHog();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -27,6 +29,8 @@ export default function AvatarDropdown({ firstName, plan }: AvatarDropdownProps)
   }, []);
 
   async function handleLogout() {
+    posthog.capture("logout");
+    posthog.reset();
     await fetch("/api/v1/auth/logout", { method: "POST" });
     router.push("/login");
   }

@@ -12,6 +12,7 @@ import {
 } from "@mdi/js";
 import React, { useState, useContext, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { OnboardingContext } from "../onboarding-context";
 import CardRadio from "@/components/CardRadio";
 import SectionCard from "@/components/SectionCard";
@@ -66,6 +67,7 @@ function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label:
 }
 
 export default function FrequencySelector() {
+    const posthog = usePostHog();
     const ctx = useContext(OnboardingContext);
     if (!ctx) throw new Error("OnboardingContext missing");
     const { onboardingData } = ctx;
@@ -171,6 +173,10 @@ export default function FrequencySelector() {
 
     const onCompleteSetup = async () => {
         setSubmitting(true);
+        posthog.capture("onboarding_submitted", {
+            schedule_type: selectedSchedule,
+            time_of_day: selectedTimeOfDay,
+        });
 
         try {
             const res = await fetch('/api/v1/onboarding', {
@@ -193,6 +199,7 @@ export default function FrequencySelector() {
             const data = await res.json();
 
             if (!res.ok) {
+                posthog.capture("onboarding_failed", { reason: "setup_failed" });
                 const planParam = onboardingData.plan ? `&plan=${onboardingData.plan}` : '';
                 router.push(`/onboarding/status?reason=setup_failed${planParam}`);
                 return;
@@ -212,8 +219,10 @@ export default function FrequencySelector() {
             //     return;
             // }
 
+            posthog.capture("onboarding_completed", { plan: "free" });
             router.push('/onboarding/status?plan=free');
         } catch {
+            posthog.capture("onboarding_failed", { reason: "setup_failed" });
             const planParam = onboardingData.plan ? `&plan=${onboardingData.plan}` : '';
             router.push(`/onboarding/status?reason=setup_failed${planParam}`);
         } finally {

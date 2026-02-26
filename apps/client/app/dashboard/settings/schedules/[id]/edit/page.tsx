@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import Link from "next/link";
 import Icon from "@mdi/react";
 import {
@@ -41,6 +42,7 @@ const timeOfDayOptions = [
 /* ─── Page ─── */
 
 export default function EditSchedulePage() {
+  const posthog = usePostHog();
   const router = useRouter();
   const params = useParams();
   const scheduleId = params.id as string;
@@ -118,10 +120,12 @@ export default function EditSchedulePage() {
       const data = await res.json();
 
       if (!res.ok) {
+        posthog.capture("schedule_update_failed", { error: data.error });
         setError(data.error || "Something went wrong");
         return;
       }
 
+      posthog.capture("schedule_updated", { channel, frequency, time_of_day: timeOfDay });
       router.push("/dashboard/settings/schedules");
     } catch {
       setError("Failed to update schedule. Please try again.");

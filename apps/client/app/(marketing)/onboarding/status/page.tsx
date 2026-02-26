@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import Icon from "@mdi/react";
 import {
     mdiCheck,
@@ -24,6 +25,7 @@ const MAX_POLL_ATTEMPTS = 15; // 15 × 2s = 30s max
 const POLL_INTERVAL_MS = 2000;
 
 function StatusContent() {
+    const posthog = usePostHog();
     const params = useSearchParams();
     const router = useRouter();
 
@@ -32,6 +34,12 @@ function StatusContent() {
     const reason = params.get("reason");       // "setup_failed" | "checkout_failed"
 
     const [pageState, setPageState] = useState<PageState>("loading");
+
+    useEffect(() => {
+        if (pageState !== "loading") {
+            posthog.capture("onboarding_status_shown", { state: pageState });
+        }
+    }, [pageState, posthog]);
 
     useEffect(() => {
         // Free plan onboarding success

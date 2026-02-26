@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -24,6 +25,7 @@ interface UserData {
 }
 
 export default function PersonalInfoPage() {
+  const posthog = usePostHog();
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,7 @@ export default function PersonalInfoPage() {
       const result = await res.json();
       setUser(result.data);
       reset({ firstName: result.data.firstName || "", lastName: result.data.lastName || "" });
+      posthog.capture("profile_updated");
       setSaveMessage({ type: "success", text: "Changes saved successfully." });
     } catch {
       setSaveMessage({ type: "error", text: "Failed to save changes. Please try again." });
@@ -92,6 +95,7 @@ export default function PersonalInfoPage() {
     try {
       const res = await fetch("/api/v1/user/deactivate", { method: "POST" });
       if (!res.ok) throw new Error("Failed to deactivate");
+      posthog.capture("account_deactivated");
       router.push("/");
     } catch {
       setIsDeactivating(false);
@@ -221,7 +225,10 @@ export default function PersonalInfoPage() {
               Deactivate your account and pause all scheduled deliveries. Your data will be preserved.
             </p>
             <button
-              onClick={() => setShowDeactivateModal(true)}
+              onClick={() => {
+                posthog.capture("account_deactivation_requested");
+                setShowDeactivateModal(true);
+              }}
               className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
             >
               Deactivate Account
