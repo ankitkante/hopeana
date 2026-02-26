@@ -3,6 +3,7 @@
 import {createContext, useState, Dispatch, SetStateAction } from 'react'
 
 interface OnboardingData {
+    plan?: "free" | "pro";
     firstName?: string;
     lastName?: string;
     channelData?: {

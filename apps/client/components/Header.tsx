@@ -11,7 +11,7 @@ export default function Header() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        fetch("/api/auth/status")
+        fetch("/api/v1/auth/status")
             .then((res) => res.json())
             .then((data) => setIsAuthenticated(data.authenticated === true))
             .catch(() => setIsAuthenticated(false));
@@ -42,9 +42,11 @@ export default function Header() {
 
                 {/* Desktop Navigation */}
                 <div className="hidden md:flex items-center gap-4">
+                    {/* PAYMENT_DISABLED
                     <Link href="/pricing" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
                         Pricing
                     </Link>
+                    */}
                     {isAuthenticated ? (
                         <Link
                             href="/dashboard"
@@ -82,6 +84,7 @@ export default function Header() {
             {isMenuOpen && (
                 <div className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
                     <nav className="flex flex-col p-4 gap-4">
+                        {/* PAYMENT_DISABLED
                         <Link
                             href="/pricing"
                             className="text-gray-700 dark:text-gray-300 py-2 hover:text-gray-900 dark:hover:text-white transition"
@@ -89,6 +92,7 @@ export default function Header() {
                         >
                             Pricing
                         </Link>
+                        */}
                         {isAuthenticated ? (
                             <Link
                                 href="/dashboard"

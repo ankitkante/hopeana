@@ -18,6 +18,48 @@ const MAX_PER_INVOCATION = 500;
 /** Max emails per bulk API call (Autosend limit). */
 const BULK_CHUNK_SIZE = 100;
 
+/** Default monthly limit for users without a subscription row (free tier). */
+const DEFAULT_FREE_MONTHLY_LIMIT = 5;
+
+/**
+ * Check if a user can send another email based on their Subscription row.
+ * Falls back to DEFAULT_FREE_MONTHLY_LIMIT if no row exists.
+ */
+async function canSendAnotherEmail(userId: string): Promise<boolean> {
+  const sub = await prisma.subscription.findUnique({ where: { userId } });
+  if (!sub) {
+    // No subscription row yet → treat as free tier starting at 0/5
+    return true;
+  }
+  const limit = sub.messageLimit ?? DEFAULT_FREE_MONTHLY_LIMIT;
+  const used = sub.messagesUsed ?? 0;
+  const allowed = used < limit && sub.status !== "cancelled" && sub.status !== "failed" && sub.status !== "expired";
+  if (!allowed) {
+    logger.debug("Monthly cap reached, skipping user", { userId, used, limit, status: sub.status });
+  }
+  return allowed;
+}
+
+/**
+ * Increment messagesUsed for a user, creating a free-tier row if none exists.
+ * Webhooks will upsert Pro plan rows on activation/renewal with 30-limit and reset usage.
+ */
+async function incrementUsage(userId: string): Promise<void> {
+  await prisma.subscription.upsert({
+    where: { userId },
+    create: {
+      userId,
+      plan: "free",
+      status: "active",
+      messageLimit: DEFAULT_FREE_MONTHLY_LIMIT,
+      messagesUsed: 1,
+    },
+    update: {
+      messagesUsed: { increment: 1 },
+    },
+  });
+}
+
 interface SendResult {
   sent: number;
   failed: number;
@@ -107,6 +149,13 @@ export async function sendDueEmails(): Promise<SendResult> {
   const prepared: { schedule: typeof batch[number]; quote: { id: string; content: string; author: string | null }; recipient: BulkRecipient }[] = [];
 
   for (const schedule of batch) {
+    // Enforce monthly cap per user (Pro=30 via webhook reset, Free=5 default)
+    const allowed = await canSendAnotherEmail(schedule.userId);
+    if (!allowed) {
+      result.skipped++;
+      continue;
+    }
+
     const quote = await pickQuote(schedule.userId, quotes.map((q) => q.id));
 
     if (!quote) {
@@ -166,6 +215,8 @@ export async function sendDueEmails(): Promise<SendResult> {
               status: "sent",
             },
           });
+          // Increment monthly usage for the user after successful send
+          await incrementUsage(item.schedule.userId);
         }
       } else {
         result.failed += chunk.length;

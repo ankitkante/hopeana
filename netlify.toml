@@ -1,3 +1,10 @@
+[build.environment]
+  # DODO_PAYMENTS_ENVIRONMENT holds a non-secret mode string ("test_mode"/"live_mode") that
+  # appears as a type cast literal in source — not a real secret.
+  # NEXT_PUBLIC_DODO_PRO_PRODUCT_ID is a public product identifier (safe to expose per Dodo docs).
+  SECRETS_SCAN_OMIT_KEYS = "DODO_PAYMENTS_ENVIRONMENT,NEXT_PUBLIC_DODO_PRO_PRODUCT_ID"
+  NEXT_DISABLE_SOURCEMAPS = "1"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"

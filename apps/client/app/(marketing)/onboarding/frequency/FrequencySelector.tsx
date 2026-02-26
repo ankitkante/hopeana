@@ -12,10 +12,13 @@ import {
 } from "@mdi/js";
 import React, { useState, useContext, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { OnboardingContext } from "../onboarding-context";
 import CardRadio from "@/components/CardRadio";
 import SectionCard from "@/components/SectionCard";
 import DayPicker from "@/components/DayPicker";
+// PAYMENT_DISABLED
+// import { redirectToCheckout } from "@/lib/checkout";
 
 function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label: 'Weeks', value: 'weeks' }], defaultValue = { value: "1", unit: "days" }, onIntervalChange }: { unitList?: { label: string; value: string }[]; defaultValue?: { value: string; unit: string }; onIntervalChange: (obj: { value: string | null, unit: string | null }) => void }) {
     const [selectedUnit, setSelectedUnit] = useState<string | null>(defaultValue.unit);
@@ -64,6 +67,7 @@ function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label:
 }
 
 export default function FrequencySelector() {
+    const posthog = usePostHog();
     const ctx = useContext(OnboardingContext);
     if (!ctx) throw new Error("OnboardingContext missing");
     const { onboardingData } = ctx;
@@ -75,7 +79,6 @@ export default function FrequencySelector() {
     const [selectedInterval, setSelectedInterval] = useState<{ value: string | null, unit: string | null }>({ value: "1", unit: "days" });
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const onScheduleSelect = useCallback((value: string) => {
         setSelectedSchedule(value);
@@ -170,10 +173,13 @@ export default function FrequencySelector() {
 
     const onCompleteSetup = async () => {
         setSubmitting(true);
-        setError(null);
+        posthog.capture("onboarding_submitted", {
+            schedule_type: selectedSchedule,
+            time_of_day: selectedTimeOfDay,
+        });
 
         try {
-            const res = await fetch('/api/onboarding', {
+            const res = await fetch('/api/v1/onboarding', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -193,13 +199,32 @@ export default function FrequencySelector() {
             const data = await res.json();
 
             if (!res.ok) {
-                setError(data.error || 'Something went wrong');
+                posthog.capture("onboarding_failed", { reason: "setup_failed" });
+                const planParam = onboardingData.plan ? `&plan=${onboardingData.plan}` : '';
+                router.push(`/onboarding/status?reason=setup_failed${planParam}`);
                 return;
             }
 
-            router.push('/dashboard');
+            // PAYMENT_DISABLED for now
+            // If user selected Pro plan, redirect to Dodo checkout instead of success screen.
+            // DODO_PAYMENTS_RETURN_URL must be set to: https://your-domain.com/onboarding/status
+            // if (onboardingData.plan === "pro") {
+            //     try {
+            //         const url = await redirectToCheckout();
+            //         if (url) return; // browser is navigating to Dodo checkout
+            //     } catch {
+            //         // fall through to checkout error
+            //     }
+            //     router.push('/onboarding/status?reason=checkout_failed');
+            //     return;
+            // }
+
+            posthog.capture("onboarding_completed", { plan: "free" });
+            router.push('/onboarding/status?plan=free');
         } catch {
-            setError('Failed to complete setup. Please try again.');
+            posthog.capture("onboarding_failed", { reason: "setup_failed" });
+            const planParam = onboardingData.plan ? `&plan=${onboardingData.plan}` : '';
+            router.push(`/onboarding/status?reason=setup_failed${planParam}`);
         } finally {
             setSubmitting(false);
         }
@@ -229,9 +254,6 @@ export default function FrequencySelector() {
                     </SectionCard>
                 ))}
             </div>
-            {error && (
-                <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
-            )}
             <div className="pt-4">
                 <button
                     className={`flex w-full items-center justify-center overflow-hidden rounded-xl bg-primary px-6 py-3 text-base font-bold text-background-dark shadow-sm transition-all ${!isFormValid || submitting ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-110 active:scale-95"}`}

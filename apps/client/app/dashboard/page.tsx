@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePostHog } from "posthog-js/react";
 import Link from "next/link";
 import Icon from "@mdi/react";
 import {
@@ -12,8 +13,9 @@ import {
 } from "@mdi/js";
 import DashboardHeader from "./components/DashboardHeader";
 import StatCard from "./components/StatCard";
-import UpgradeCard from "./components/UpgradeCard";
-import CurrentPlanCard from "./components/CurrentPlanCard";
+// PAYMENT_DISABLED
+// import UpgradeCard from "./components/UpgradeCard";
+// import CurrentPlanCard from "./components/CurrentPlanCard";
 
 import SentMessagesTable from "./components/SentMessagesTable";
 
@@ -48,6 +50,7 @@ interface MessageStats {
 }
 
 export default function DashboardPage() {
+  const posthog = usePostHog();
   const [user, setUser] = useState<UserData | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [schedules, setSchedules] = useState<SchedulesData | null>(null);
@@ -59,10 +62,10 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       try {
         const [userRes, subRes, schedRes, msgRes] = await Promise.all([
-          fetch("/api/user"),
-          fetch("/api/subscription"),
-          fetch("/api/schedules"),
-          fetch("/api/messages/stats"),
+          fetch("/api/v1/user"),
+          fetch("/api/v1/subscription"),
+          fetch("/api/v1/schedules"),
+          fetch("/api/v1/messages/stats"),
         ]);
 
         if (!userRes.ok) throw new Error("Failed to load user data");
@@ -78,6 +81,12 @@ export default function DashboardPage() {
         setSubscription(subData.data);
         setSchedules(schedData.data);
         setMessageStats(msgData.data);
+
+        posthog.identify(userData.data.id, {
+          email: userData.data.email,
+          firstName: userData.data.firstName,
+          plan: subData.data?.plan,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
@@ -86,7 +95,7 @@ export default function DashboardPage() {
     }
 
     fetchDashboardData();
-  }, []);
+  }, [posthog]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -191,14 +200,15 @@ function FreeDashboard({
       {/* Bottom section: Quote + Upgrade */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left side - Sent Messages */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-5">
           <SentMessagesTable />
         </div>
 
-        {/* Right side */}
+        {/* Right side - PAYMENT_DISABLED
         <div className="lg:col-span-2 space-y-6">
           <UpgradeCard />
         </div>
+        */}
       </div>
     </>
   );
@@ -268,14 +278,15 @@ function ProDashboard({
       {/* Bottom section */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left side - Sent Messages */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-5">
           <SentMessagesTable />
         </div>
 
-        {/* Right side */}
+        {/* Right side - PAYMENT_DISABLED
         <div className="lg:col-span-2 space-y-6">
           <CurrentPlanCard billingDate={subscription.billingDate} />
         </div>
+        */}
       </div>
     </>
   );

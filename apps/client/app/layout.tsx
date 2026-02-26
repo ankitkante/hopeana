@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
+import { Suspense } from "react";
+import { ToastProvider } from "@/components/Toast";
+import { PostHogProvider } from "@/components/PostHogProvider";
+import { PostHogPageView } from "@/components/PostHogPageView";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -20,7 +24,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${manrope.variable} antialiased`}>
-        {children}
+        <PostHogProvider>
+          <ToastProvider>
+            <Suspense fallback={null}>
+              <PostHogPageView />
+            </Suspense>
+            {children}
+          </ToastProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

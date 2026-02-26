@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { usePostHog } from "posthog-js/react";
 import Icon from "@mdi/react";
 import {
   mdiPlus,
@@ -63,6 +64,7 @@ function formatTimeOfDay(timeOfDay: string | null): string {
 }
 
 export default function SchedulesPage() {
+  const posthog = usePostHog();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -76,7 +78,7 @@ export default function SchedulesPage() {
   useEffect(() => {
     async function fetchSchedules() {
       try {
-        const res = await fetch("/api/schedules");
+        const res = await fetch("/api/v1/schedules");
         if (res.ok) {
           const data = await res.json();
           setSchedules(data.data.schedules);
@@ -97,12 +99,13 @@ export default function SchedulesPage() {
       prev.map((s) => (s.id === scheduleId ? { ...s, isActive: newActive } : s))
     );
     try {
-      const res = await fetch("/api/schedules", {
+      const res = await fetch("/api/v1/schedules", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scheduleId, isActive: newActive }),
       });
       if (!res.ok) throw new Error();
+      posthog.capture("schedule_toggled", { active: newActive });
       showToast(`Schedule ${newActive ? "activated" : "paused"} successfully!`, "success");
     } catch {
       // Revert
@@ -117,13 +120,14 @@ export default function SchedulesPage() {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      const res = await fetch("/api/schedules", {
+      const res = await fetch("/api/v1/schedules", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scheduleId: deleteTarget }),
       });
       if (!res.ok) throw new Error();
       setSchedules((prev) => prev.filter((s) => s.id !== deleteTarget));
+      posthog.capture("schedule_deleted");
       showToast("Schedule deleted successfully!", "success");
     } catch {
       showToast("Failed to delete schedule.", "error");
@@ -252,7 +256,7 @@ export default function SchedulesPage() {
                   <Icon path={mdiPencilOutline} size={0.75} />
                 </Link>
                 <button
-                  onClick={() => setDeleteTarget(schedule.id)}
+                  onClick={() => { posthog.capture("schedule_delete_requested"); setDeleteTarget(schedule.id); }}
                   title="Delete schedule"
                   className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                 >

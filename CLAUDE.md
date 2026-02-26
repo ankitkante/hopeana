@@ -40,9 +40,10 @@ pnpm install                      # Install all workspace dependencies
 ### Tech Stack
 - Next.js 16.1.1 with React 19, TypeScript 5.9
 - Tailwind CSS 4 for styling
-- Prisma 7.2 with PostgreSQL (uses @prisma/adapter-pg)
+- Prisma 7.2 with PostgreSQL (uses @prisma/adapter-pg — **caution**: custom PostgreSQL enum arrays like `DayOfWeek[]` are not supported; `pg` only knows built-in type OIDs so custom enums are returned as raw strings, causing `e.map is not a function`. Use `String[]` instead of custom enum arrays in schema.)
 - React Hook Form + Yup for form handling
 - Material Design Icons (@mdi/react)
+- PostHog (`posthog-js`) for product analytics
 
 ### Path Aliases
 ```
@@ -55,8 +56,9 @@ types    → packages/types/src
 
 ### Database Models
 - **User** - Account info with social login support
-- **Subscription** - Plan tracking (free trial = 5 messages, pro = 30/month)
-- **Schedule** - Delivery preferences (channel, frequency, timezone)
+- **Subscription** - Plan tracking (free trial = 5 messages, pro = 30/month). Fields: `plan`, `status`, `messageLimit`, `messagesUsed`, `gatewaySubscriptionId`, `cancelAtPeriodEnd`, `billingDate`
+- **Payment** - Audit trail for payment gateway webhook events. Upserted by `gatewayPaymentId` (unique, idempotency key). Fields: `gatewaySubscriptionId`, `gatewayCustomerId`, `customerEmail`, `amount` (smallest currency unit), `currency`, `status`, `failureReason`, `rawPayload`
+- **Schedule** - Delivery preferences (channel, frequency, timezone). `daysOfWeek` is `String[]` (not `DayOfWeek[]` — changed for `@prisma/adapter-pg` compatibility)
 - **SentMessage** - Delivery tracking with status
 - **QuotesBank** - Repository of motivational quotes
 
@@ -74,7 +76,7 @@ types    → packages/types/src
 - Token stored in HTTP-only cookie: `hopeana_token` (7-day expiration)
 - Token payload: `{ userId: string; email: string }`
 - `getUserFromRequest()` (`apps/client/lib/get-user-from-request.ts`) extracts user from request — checks injected headers first, falls back to cookie verification
-- Auth status endpoint: `GET /api/auth/status`
+- Auth status endpoint: `GET /api/v1/auth/status`
 
 ### Dashboard & Settings
 - Dashboard at `/dashboard` — client component, fetches user/subscription/schedules/messageStats via `Promise.all`
@@ -83,7 +85,7 @@ types    → packages/types/src
 - `DashboardHeader` component shared between dashboard and settings (includes avatar dropdown with Settings + Logout)
 - Account deactivation is soft-delete: sets `user.isActive = false` and pauses all schedules (no data deletion)
 - Schedule CRUD: create at `/dashboard/settings/schedules/new`, edit at `/dashboard/settings/schedules/[id]/edit`
-- Single-schedule API: `GET /api/schedules/[id]` (fetch) and `PATCH /api/schedules/[id]` (full update) with ownership verification
+- Single-schedule API: `GET /api/v1/schedules/[id]` (fetch) and `PATCH /api/v1/schedules/[id]` (full update) with ownership verification
 
 ### UI Component Patterns
 - Cards: `bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6`
@@ -144,6 +146,83 @@ Operational scripts live at the repo root in `scripts/`, run via `tsx`. They use
 - **`test-scheduler.ts`** — Locally invokes `sendDueEmails()` to test the scheduled email pipeline end-to-end. Loads env from `apps/client/.env.local`. Run: `pnpm test:scheduler`
 - **`data/quotes.json`** — Quote data file. Add/remove entries here to manage the quote bank.
 
+## Dodo Payments (Payment Gateway)
+
+Package: `@dodopayments/nextjs` (v0.3.4). Handles Pro subscription checkout and webhook lifecycle.
+
+### Checkout Flow
+- **Route**: `GET /api/v1/checkout` ([apps/client/app/api/v1/checkout/route.ts](apps/client/app/api/v1/checkout/route.ts))
+- **Pending placeholder**: before redirecting, creates a `pending_${correlationId}` Payment row; the webhook resolves it via `metadata.correlation_id`
+- Auth-gated: requires valid session cookie, returns 401 JSON if unauthenticated
+- Server enforces `productId`, `quantity=1`, and `email` from session — all client query params are stripped (tamper-proof)
+- Uses `Checkout` adapter from `@dodopayments/nextjs` in "static" mode
+- Returns `{ checkout_url: "https://checkout.dodopayments.com/..." }` — client redirects user there
+- Product ID: prefers `DODO_PRO_PRODUCT_ID` (server-only), falls back to `NEXT_PUBLIC_DODO_PRO_PRODUCT_ID`
+- Client helper: `lib/checkout.ts` — `redirectToCheckout()` calls `fetch('/api/v1/checkout')` with no params, checks `res.ok`
+- **Return URL** (`DODO_PAYMENTS_RETURN_URL`): should point to `/onboarding/status`. That page polls `GET /api/v1/payments?status=pending&limit=1` to detect webhook arrival, then shows `pro_success` / `payment_failed` states
+- **Cleanup**: `netlify/functions/cleanup-abandoned-checkouts.ts` runs daily at 2 AM UTC — marks `pending_*` Payment rows older than 48 h as `"abandoned"`
+- **Payments API**: `GET /api/v1/payments` — returns paginated payment records for the authenticated user; supports `status`, `limit`, `page` query params
+
+### Webhook Flow
+- **Route**: `POST /api/webhook/dodo-payments` ([apps/client/app/api/webhook/dodo-payments/route.ts](apps/client/app/api/webhook/dodo-payments/route.ts))
+- Uses `Webhooks` adapter with signature verification via `DODO_PAYMENTS_WEBHOOK_SECRET` (adapter property: `webhookKey`)
+- Matches users by `payload.data.customer.email` from webhook payload → looks up `User` by email
+- **Webhook payload structure**: `payload.data` is the entity itself (flat), NOT `payload.data.subscription` — access fields as `payload.data.subscription_id`, `payload.data.customer.email`, etc.
+- **Vendor-agnostic naming**: all DB fields use `gateway*` prefix (e.g., `gatewayPaymentId`, `gatewaySubscriptionId`) — not tied to Dodo
+- **Subscription events handled**:
+  - `subscription.active` → upsert Subscription: plan="pro", status="active", messageLimit=30. Idempotent: `messagesUsed` only set to 0 on create (not on update/retry)
+  - `subscription.renewed` → same as active but resets `messagesUsed=0` (new billing cycle)
+  - `subscription.cancelled` → checks `cancel_at_next_billing_date`: if true, sets `cancelAtPeriodEnd=true` (keeps status active); if false, sets status="cancelled"
+  - `subscription.failed` → set status="failed"
+  - `subscription.expired` → set status="expired" (fires after cancel-at-period-end expires)
+- **Payment events handled**:
+  - `payment.succeeded` → upsert Payment row with status="succeeded", links to user and subscription
+  - `payment.failed` → upsert Payment row with status="failed", parses `failureReason` from multiple payload fields (truncated to 512 chars)
+  - Both use `gatewayPaymentId` as unique idempotency key — safe for webhook retries
+
+### Monthly Message Cap Enforcement
+- `canSendAnotherEmail()` in `packages/core/src/send-due-emails.ts` checks `messagesUsed < messageLimit` and that status is not cancelled/failed/expired
+- `incrementUsage()` upserts Subscription row after each successful email send (creates free-tier row if none exists)
+- Free tier: 5 messages/month (default). Pro tier: 30 messages/month (set by webhook on activation/renewal, resets `messagesUsed` to 0)
+
+## Analytics (PostHog)
+
+Package: `posthog-js` (client-side). Provider and page-view tracker live in `apps/client/components/`.
+
+- **`PostHogProvider`** (`components/PostHogProvider.tsx`) — initializes PostHog on mount, wraps the root layout. `autocapture: true` handles all link/button clicks automatically.
+- **`PostHogPageView`** (`components/PostHogPageView.tsx`) — fires `$pageview` on every SPA route change via `usePathname` + `useSearchParams`. Wrapped in `<Suspense>` in the root layout (required by `useSearchParams`).
+- **User identification** — `posthog.identify(userId, { email, firstName, plan })` is called in `app/dashboard/page.tsx` after dashboard data loads, linking anonymous events to the user.
+- **`posthog.reset()`** is called on logout (`AvatarDropdown`) to clear identity for the next session.
+- Analytics only fires when `NEXT_PUBLIC_POSTHOG_KEY` is set — leaving it unset silences all tracking. Set it only in the production Netlify site; leave it unset in staging and local.
+- Env vars: `NEXT_PUBLIC_POSTHOG_KEY` (PostHog project key — presence enables analytics), `NEXT_PUBLIC_POSTHOG_HOST` (defaults to `https://us.i.posthog.com`).
+- When adding new user actions, use `usePostHog()` from `posthog-js/react` and call `posthog.capture('event_name', { ...props })`.
+
+### Event Taxonomy
+| Event | Trigger |
+|-------|---------|
+| `$pageview` | Every route change (automatic) |
+| `login_attempted` | Login form submit |
+| `onboarding_channel_step_completed` | Onboarding channel step Next |
+| `onboarding_submitted` | Frequency form submit |
+| `onboarding_completed` | Successful onboarding API |
+| `onboarding_failed` | Onboarding API error |
+| `profile_updated` | Personal info saved |
+| `account_deactivation_requested` | Deactivate button clicked |
+| `account_deactivated` | Deactivation confirmed |
+| `schedule_created` | New schedule API success |
+| `schedule_create_failed` | New schedule API error |
+| `schedule_updated` | Edit schedule API success |
+| `schedule_update_failed` | Edit schedule API error |
+| `schedule_toggled` | Pause/resume toggle on schedule list |
+| `schedule_delete_requested` | Delete icon clicked (modal opened) |
+| `schedule_deleted` | Schedule delete API success |
+| `onboarding_status_shown` | Status page settles on a terminal state (`state` prop: `free_success`, `pro_success`, `payment_failed`, `setup_error`, `checkout_error`) |
+| `pricing_hero_cta_clicked` | "Get Started" hero button on pricing page |
+| `pricing_free_cta_clicked` | "Try for Free" on pricing page (unauthenticated) |
+| `pricing_pro_cta_clicked` | "Subscribe Now" on pricing page (unauthenticated) |
+| `checkout_initiated` | "Upgrade to Pro" button clicked (authenticated free user) |
+| `logout` | Logout button |
+
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection string (required by db package)
 - `JWT_SECRET` - Secret key for signing/verifying JWT auth tokens (used by `apps/client/lib/auth.ts`)
@@ -153,3 +232,11 @@ Operational scripts live at the repo root in `scripts/`, run via `tsx`. They use
 - `HOPEANA_REPLY_TO_EMAIL` - Reply-to address for outgoing emails
 - `QUOTE_EMAIL_TEMPLATE_ID` - Template ID for the scheduled quote email
 - `QUOTE_FROM_EMAIL` - Sender address for quote emails (can reuse `WELCOME_FROM_EMAIL`)
+- `DODO_PAYMENTS_API_KEY` - Dodo Payments API key (server-only)
+- `DODO_PAYMENTS_WEBHOOK_SECRET` - Webhook signature verification secret (server-only)
+- `DODO_PAYMENTS_RETURN_URL` - Post-checkout redirect URL (e.g., `https://hopeana.com/dashboard`)
+- `DODO_PAYMENTS_ENVIRONMENT` - `"test_mode"` or `"live_mode"`
+- `DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (server-only, preferred by checkout route)
+- `NEXT_PUBLIC_DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (public — safe to expose, product IDs are public identifiers; used as client-side fallback)
+- `NEXT_PUBLIC_POSTHOG_KEY` - PostHog project API key — set only in production to activate analytics (unset in local/staging)
+- `NEXT_PUBLIC_POSTHOG_HOST` - PostHog ingestion host (optional, defaults to `https://us.i.posthog.com`)

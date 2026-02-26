@@ -16,8 +16,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     async function fetchData() {
       try {
         const [userRes, subRes] = await Promise.all([
-          fetch("/api/user"),
-          fetch("/api/subscription"),
+          fetch("/api/v1/user"),
+          fetch("/api/v1/subscription"),
         ]);
         if (userRes.ok) {
           const userData = await userRes.json();

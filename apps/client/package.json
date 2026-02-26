@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@dodopayments/nextjs": "^0.3.4",
+    "posthog-js": "^1.257.0",
     "@hookform/resolvers": "^5.2.2",
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1",
