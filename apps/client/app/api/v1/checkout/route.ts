@@ -16,6 +16,9 @@ const checkoutHandler = Checkout({
 });
 
 export async function GET(request: NextRequest) {
+  // PAYMENT_DISABLED FOR NOW
+  return NextResponse.json({}, { status: 404 });
+
   const auth = await getUserFromRequest(request);
   if (!auth) {
     return NextResponse.json(

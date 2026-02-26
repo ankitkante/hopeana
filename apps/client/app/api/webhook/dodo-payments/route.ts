@@ -209,6 +209,12 @@ async function upsertPayment(opts: {
   logger.info("Payment upserted", { paymentId: opts.gatewayPaymentId, status: opts.status, userId: user?.id ?? "unknown" });
 }
 
+// PAYMENT_DISABLED FOR NOW
+export async function POST() {
+  return new Response(null, { status: 404 });
+}
+
+/* PAYMENT_DISABLED_START
 export const POST = Webhooks({
   webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_SECRET!,
 
@@ -398,3 +404,4 @@ export const POST = Webhooks({
     }
   },
 });
+PAYMENT_DISABLED_END */

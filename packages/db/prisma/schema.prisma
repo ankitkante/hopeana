@@ -110,7 +110,7 @@ model Schedule {
   frequency     Frequency
   timeOfDay     TimeOfDay?
   timezone      String? // user's timezone for scheduling
-  daysOfWeek    DayOfWeek[]
+  daysOfWeek    String[] // was DayOfWeek[] — changed to String[] for @prisma/adapter-pg compatibility
   intervalValue Int? // interval number (e.g., 2)
   intervalUnit  IntervalUnit?
   isActive      Boolean @default(true)

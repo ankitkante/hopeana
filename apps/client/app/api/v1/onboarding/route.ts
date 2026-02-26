@@ -93,16 +93,16 @@ export async function POST(request: NextRequest) {
       };
       logger.debug("Sending welcome email", { to: user.email, templateId: emailPayload.templateId });
 
-      const emailResponse = await autosend.emails.send(emailPayload);
-      logger.debug("Autosend response", { response: emailResponse });
+      // const emailResponse = await autosend.emails.send(emailPayload);
+      // logger.debug("Autosend response", { response: emailResponse });
 
-      if (emailResponse?.success) {
-        emailId = emailResponse?.data?.emailId ?? null;
-        logger.info("Welcome email sent", { emailId, userId: user.id });
-      } else {
-        emailSent = false;
-        logger.error("Autosend returned success: false", { response: emailResponse });
-      }
+      // if (emailResponse?.success) {
+      //   emailId = emailResponse?.data?.emailId ?? null;
+      //   logger.info("Welcome email sent", { emailId, userId: user.id });
+      // } else {
+      //   emailSent = false;
+      //   logger.error("Autosend returned success: false", { response: emailResponse });
+      // }
     } catch (emailError) {
       logger.error("Failed to send welcome email", { error: emailError });
       emailSent = false;
@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    throw error
     logger.error("POST /api/onboarding error", { error });
     return NextResponse.json(
       { success: false, error: "Failed to complete onboarding" },

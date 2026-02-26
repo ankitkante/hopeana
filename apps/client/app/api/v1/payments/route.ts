@@ -23,6 +23,9 @@ import { getUserFromRequest } from "@/lib/get-user-from-request";
 //     }
 //   }
 export async function GET(request: NextRequest) {
+  // PAYMENT_DISABLED FOR NOW
+  return NextResponse.json({}, { status: 404 });
+
   const auth = await getUserFromRequest(request);
   if (!auth) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });

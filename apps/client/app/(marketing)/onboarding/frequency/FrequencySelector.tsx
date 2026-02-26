@@ -16,7 +16,8 @@ import { OnboardingContext } from "../onboarding-context";
 import CardRadio from "@/components/CardRadio";
 import SectionCard from "@/components/SectionCard";
 import DayPicker from "@/components/DayPicker";
-import { redirectToCheckout } from "@/lib/checkout";
+// PAYMENT_DISABLED
+// import { redirectToCheckout } from "@/lib/checkout";
 
 function IntervalPicker({ unitList = [{ label: 'Days', value: 'days' }, { label: 'Weeks', value: 'weeks' }], defaultValue = { value: "1", unit: "days" }, onIntervalChange }: { unitList?: { label: string; value: string }[]; defaultValue?: { value: string; unit: string }; onIntervalChange: (obj: { value: string | null, unit: string | null }) => void }) {
     const [selectedUnit, setSelectedUnit] = useState<string | null>(defaultValue.unit);
@@ -197,18 +198,19 @@ export default function FrequencySelector() {
                 return;
             }
 
+            // PAYMENT_DISABLED for now
             // If user selected Pro plan, redirect to Dodo checkout instead of success screen.
             // DODO_PAYMENTS_RETURN_URL must be set to: https://your-domain.com/onboarding/status
-            if (onboardingData.plan === "pro") {
-                try {
-                    const url = await redirectToCheckout();
-                    if (url) return; // browser is navigating to Dodo checkout
-                } catch {
-                    // fall through to checkout error
-                }
-                router.push('/onboarding/status?reason=checkout_failed');
-                return;
-            }
+            // if (onboardingData.plan === "pro") {
+            //     try {
+            //         const url = await redirectToCheckout();
+            //         if (url) return; // browser is navigating to Dodo checkout
+            //     } catch {
+            //         // fall through to checkout error
+            //     }
+            //     router.push('/onboarding/status?reason=checkout_failed');
+            //     return;
+            // }
 
             router.push('/onboarding/status?plan=free');
         } catch {

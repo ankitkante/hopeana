@@ -25,6 +25,7 @@ export default async (_req: Request, _context: Context) => {
   });
 };
 
-export const config: Config = {
-  schedule: "0 2 * * *", // daily at 2 AM UTC
-};
+// PAYMENT_DISABLED
+// export const config: Config = {
+//   schedule: "0 2 * * *", // daily at 2 AM UTC
+// };

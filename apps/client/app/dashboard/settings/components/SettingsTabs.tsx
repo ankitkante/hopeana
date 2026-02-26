@@ -3,11 +3,12 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Icon from "@mdi/react";
-import { mdiAccountOutline, mdiCreditCardOutline, mdiClockOutline } from "@mdi/js";
+import { mdiAccountOutline, /* PAYMENT_DISABLED mdiCreditCardOutline, */ mdiClockOutline } from "@mdi/js";
 
 const tabs = [
   { label: "Personal Info", href: "/dashboard/settings", icon: mdiAccountOutline },
-  { label: "Subscription", href: "/dashboard/settings/subscription", icon: mdiCreditCardOutline },
+  // PAYMENT_DISABLED
+  // { label: "Subscription", href: "/dashboard/settings/subscription", icon: mdiCreditCardOutline },
   { label: "My Schedules", href: "/dashboard/settings/schedules", icon: mdiClockOutline },
 ];
 
