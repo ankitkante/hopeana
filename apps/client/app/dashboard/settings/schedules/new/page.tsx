@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import Link from "next/link";
 import Icon from "@mdi/react";
 import {
@@ -41,6 +42,7 @@ const timeOfDayOptions = [
 /* ─── Page ─── */
 
 export default function NewSchedulePage() {
+  const posthog = usePostHog();
   const router = useRouter();
 
   const [channel, setChannel] = useState<string | null>("email");
@@ -90,10 +92,12 @@ export default function NewSchedulePage() {
       const data = await res.json();
 
       if (!res.ok) {
+        posthog.capture("schedule_create_failed", { error: data.error });
         setError(data.error || "Something went wrong");
         return;
       }
 
+      posthog.capture("schedule_created", { channel, frequency, time_of_day: timeOfDay });
       router.push("/dashboard/settings/schedules");
     } catch {
       setError("Failed to create schedule. Please try again.");

@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useContext } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 
 import Icon from "@mdi/react";
 import {
@@ -28,6 +29,7 @@ export default function ChannelSelector({
     lastName?: string;
     plan?: "free" | "pro";
 }) {
+    const posthog = usePostHog();
     const ctx = useContext(OnboardingContext);
     if (!ctx) throw new Error("OnboardingContext missing");
     const { setOnboardingData } = ctx;
@@ -53,6 +55,7 @@ export default function ChannelSelector({
     }
 
     const onChannelSave = () => {
+        posthog.capture("onboarding_channel_step_completed", { channel: selectedChannel });
         setOnboardingData((prev) => {
             return {
                 ...prev,

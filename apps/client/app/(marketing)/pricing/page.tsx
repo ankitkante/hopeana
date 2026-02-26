@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { mdiCheck, mdiChevronUp, mdiChevronDown } from "@mdi/js";
 import Icon from "@mdi/react";
 import { useToast } from "@/components/Toast";
@@ -71,6 +72,7 @@ function CheckItem({ children }: { children: React.ReactNode }) {
 type AuthState = "loading" | "unauthenticated" | "free" | "pro";
 
 export default function PricingPage() {
+    const posthog = usePostHog();
     const router = useRouter();
     const { showToast } = useToast();
     const [authState, setAuthState] = useState<AuthState>("loading");
@@ -99,6 +101,7 @@ export default function PricingPage() {
 
     async function handleCheckout() {
         setCheckoutLoading(true);
+        posthog.capture("checkout_initiated");
         try {
             const url = await redirectToCheckout();
             if (!url) {
@@ -126,7 +129,7 @@ export default function PricingPage() {
                 return (
                     <button
                         className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition ease-in-out mb-8"
-                        onClick={() => router.push("/onboarding/communication-channels?plan=free")}
+                        onClick={() => { posthog.capture("pricing_free_cta_clicked"); router.push("/onboarding/communication-channels?plan=free"); }}
                     >
                         Try for Free
                     </button>
@@ -158,7 +161,7 @@ export default function PricingPage() {
                 return (
                     <button
                         className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-green-600 transition ease-in-out mb-8"
-                        onClick={() => router.push("/onboarding/communication-channels?plan=pro")}
+                        onClick={() => { posthog.capture("pricing_pro_cta_clicked"); router.push("/onboarding/communication-channels?plan=pro"); }}
                     >
                         Subscribe Now
                     </button>
@@ -195,7 +198,7 @@ export default function PricingPage() {
                     </p>
                     <button
                         className="px-6 sm:px-8 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition ease-in-out"
-                        onClick={() => router.push("/onboarding/communication-channels")}
+                        onClick={() => { posthog.capture("pricing_hero_cta_clicked"); router.push("/onboarding/communication-channels"); }}
                     >
                         Get Started
                     </button>
