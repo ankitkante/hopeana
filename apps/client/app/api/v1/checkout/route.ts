@@ -1,4 +1,5 @@
 // apps/client/app/api/v1/checkout/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { Checkout } from "@dodopayments/nextjs";
@@ -16,9 +17,6 @@ const checkoutHandler = Checkout({
 });
 
 export async function GET(request: NextRequest) {
-  // PAYMENT_DISABLED FOR NOW
-  return NextResponse.json({}, { status: 404 });
-
   const auth = await getUserFromRequest(request);
   if (!auth) {
     return NextResponse.json(
@@ -26,6 +24,9 @@ export async function GET(request: NextRequest) {
       { status: 401 }
     );
   }
+
+  // PAYMENT_DISABLED
+  return NextResponse.json({}, { status: 404 });
 
   const productId =
     process.env.DODO_PRO_PRODUCT_ID ||
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
   }
 
   const user = await prisma.user.findUnique({
+    // @ts-expect-error dead code — auth is narrowed above but TS loses it after return
     where: { id: auth.userId },
     select: { firstName: true, lastName: true },
   });
@@ -55,8 +57,10 @@ export async function GET(request: NextRequest) {
   try {
     await prisma.payment.create({
       data: {
+        // @ts-expect-error dead code — auth is narrowed above but TS loses it after return
         userId: auth.userId,
         gatewayPaymentId: `pending_${correlationId}`,
+        // @ts-expect-error dead code — auth is narrowed above but TS loses it after return
         customerEmail: auth.email,
         amount: 0,
         currency: "",
@@ -69,12 +73,16 @@ export async function GET(request: NextRequest) {
     logger.error("Failed to create pending placeholder", { error: err });
   }
 
+  // @ts-expect-error dead code — productId narrowed above but TS loses it after return
   url.searchParams.set("productId", productId);
   url.searchParams.set("quantity", "1");
+  // @ts-expect-error dead code — auth is narrowed above but TS loses it after return
   url.searchParams.set("email", auth.email);
   if (user?.firstName || user?.lastName)
     url.searchParams.set("fullName", [user?.firstName, user?.lastName].filter(Boolean).join(" "));
+  // @ts-expect-error dead code — user narrowed above but TS loses it after return
   if (user?.firstName) url.searchParams.set("firstName", user.firstName);
+  // @ts-expect-error dead code — user narrowed above but TS loses it after return
   if (user?.lastName) url.searchParams.set("lastName", user.lastName);
   url.searchParams.set("metadata_correlation_id", correlationId);
 
