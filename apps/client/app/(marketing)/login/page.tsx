@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -22,8 +23,10 @@ const loginSchema = yup.object({
 type LoginFormData = yup.InferType<typeof loginSchema>;
 
 export default function LoginPage() {
+    const router = useRouter();
     const posthog = usePostHog();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [serverError, setServerError] = useState<string | null>(null);
 
     const {
         register,
@@ -36,12 +39,31 @@ export default function LoginPage() {
 
     const onSubmit = async (data: LoginFormData) => {
         setIsSubmitting(true);
+        setServerError(null);
         posthog.capture("login_attempted", { email: data.email });
-        // TODO: Implement actual login logic
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setIsSubmitting(false);
+        try {
+            const res = await fetch("/api/v1/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: data.email, password: data.password }),
+            });
+
+            const json = await res.json();
+
+            if (!res.ok) {
+                setServerError(json.error || "Invalid email or password.");
+                posthog.capture("login_failed", { reason: json.error });
+                return;
+            }
+
+            posthog.capture("login_success", { email: data.email });
+            router.push("/dashboard");
+        } catch {
+            setServerError("Something went wrong. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -130,6 +152,11 @@ export default function LoginPage() {
                                 Forgot password?
                             </Link>
                         </div>
+
+                        {/* Server error */}
+                        {serverError && (
+                            <p className="text-sm text-red-500 text-center">{serverError}</p>
+                        )}
 
                         {/* Submit Button */}
                         <button
