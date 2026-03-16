@@ -401,25 +401,13 @@ function calculateBatchSize(dueCount: number): number {
 }
 
 /**
- * Pick a random quote that the user hasn't been sent recently.
- * Falls back to any random quote if all have been sent.
+ * Pick a random quote from the provided unseen quote IDs.
+ * Callers must filter out already-sent quotes before calling this function.
  */
-async function pickQuote(userId: string, allQuoteIds: string[]) {
-  // Get IDs of quotes recently sent to this user
-  const recentlySent = await prisma.sentMessage.findMany({
-    where: { userId },
-    orderBy: { sentAt: "desc" },
-    take: Math.min(allQuoteIds.length - 1, 50), // keep at least 1 available
-    select: { quoteId: true },
-  });
+async function pickQuote(unseenQuoteIds: string[]) {
+  if (unseenQuoteIds.length === 0) return null;
 
-  const sentIds = new Set(recentlySent.map((m) => m.quoteId));
-  const unseenIds = allQuoteIds.filter((id) => !sentIds.has(id));
-
-  // Pick from unseen, or fall back to all if everything has been seen
-  const pool = unseenIds.length > 0 ? unseenIds : allQuoteIds;
-  const randomId = pool[Math.floor(Math.random() * pool.length)];
-
+  const randomId = unseenQuoteIds[Math.floor(Math.random() * unseenQuoteIds.length)];
   return prisma.quotesBank.findUnique({ where: { id: randomId } });
 }
 
