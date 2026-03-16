@@ -1,9 +1,9 @@
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT, jwtVerify, JWTPayload  } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "");
 export const AUTH_COOKIE_NAME = "hopeana_token";
 
-export interface TokenPayload {
+export interface TokenPayload extends JWTPayload  {
   userId: string;
   email: string;
   tokenVersion: number;
