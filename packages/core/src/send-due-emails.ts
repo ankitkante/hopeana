@@ -94,7 +94,7 @@ async function sendLowQuotesAlert(
   try {
     await autosend.emails.send({
       from: {
-        email: process.env.QUOTE_FROM_EMAIL || process.env.WELCOME_FROM_EMAIL || "",
+        email: adminEmail,
         name: "Hopeana System",
       },
       to: { email: adminEmail },
@@ -127,7 +127,7 @@ async function sendZeroQuotesAlert(
   try {
     await autosend.emails.send({
       from: {
-        email: process.env.QUOTE_FROM_EMAIL || process.env.WELCOME_FROM_EMAIL || "",
+        email: adminEmail,
         name: "Hopeana System",
       },
       to: { email: adminEmail },
