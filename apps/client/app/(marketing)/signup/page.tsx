@@ -90,9 +90,8 @@ export default function SignUpPage() {
                 <div className="flex flex-col items-center mb-8">
                     <Link href="/" className="flex items-center gap-3 mb-2">
                         <Image
-                            className="dark:invert"
-                            src="/globe.svg"
-                            alt="Hopeana Logo"
+                            src="/logo.png"
+                            alt="Hopeana logo"
                             width={48}
                             height={48}
                         />

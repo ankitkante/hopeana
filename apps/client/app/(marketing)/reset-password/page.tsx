@@ -160,7 +160,7 @@ export default function ResetPasswordPage() {
             <div className="w-full max-w-md">
                 <div className="flex flex-col items-center mb-8">
                     <Link href="/" className="flex items-center gap-3 mb-2">
-                        <Image className="dark:invert" src="/globe.svg" alt="Hopeana Logo" width={48} height={48} />
+                        <Image src="/logo.png" alt="Hopeana logo" width={48} height={48} />
                         <h1 className="text-3xl font-bold text-primary">Hopeana</h1>
                     </Link>
                     <p className="text-gray-600 dark:text-gray-400 text-center">Set a new password</p>
