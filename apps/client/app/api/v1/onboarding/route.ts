@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
 import { Autosend, type SendEmailOptions } from 'autosendjs';
-import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { signToken, AUTH_COOKIE_NAME, authCookieOptions } from "@/lib/auth";
 import { createLogger } from "utils";
 
 const logger = createLogger('api:onboarding');
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       emailSent = false;
     }
 
-    const token = await signToken({ userId: user.id, email: user.email });
+    const token = await signToken({ userId: user.id, email: user.email, tokenVersion: user.tokenVersion });
 
     const response = NextResponse.json({
       success: true,
@@ -119,13 +119,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    response.cookies.set(AUTH_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    response.cookies.set(AUTH_COOKIE_NAME, token, authCookieOptions(60 * 60 * 24 * 7));
 
     return response;
   } catch (error) {
