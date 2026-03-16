@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
 import { Autosend, type SendEmailOptions } from 'autosendjs';
-<<<<<<< HEAD
 import { signToken, AUTH_COOKIE_NAME, authCookieOptions } from "@/lib/auth";
 import { generateToken, sendVerificationEmail } from "@/lib/auth-tokens";
-=======
-import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
-import { sendVerificationEmail } from "@/lib/auth-tokens";
->>>>>>> a87172d3e6cf064cc11db6c566cbf86029f5542f
 import { createLogger } from "utils";
 
 const logger = createLogger('api:onboarding');
@@ -121,33 +116,10 @@ export async function POST(request: NextRequest) {
       emailSent = false;
     }
 
-<<<<<<< HEAD
     // Send verification email (failure doesn't roll back account creation)
     await sendVerificationEmail(user.email, user.firstName, verificationToken);
 
     const token = await signToken({ userId: user.id, email: user.email, tokenVersion: user.tokenVersion });
-=======
-    // Send verification email
-    let verificationEmailSent = true;
-    try {
-      const verificationResult = await sendVerificationEmail({
-        email: user.email,
-        userId: user.id,
-        firstName: user.firstName,
-      });
-      if (verificationResult.success) {
-        logger.info("Verification email sent", { userId: user.id });
-      } else {
-        verificationEmailSent = false;
-        logger.error("Verification email send returned failure", { userId: user.id });
-      }
-    } catch (verificationError) {
-      logger.error("Failed to send verification email", { error: verificationError });
-      verificationEmailSent = false;
-    }
-
-    const token = await signToken({ userId: user.id, email: user.email });
->>>>>>> a87172d3e6cf064cc11db6c566cbf86029f5542f
 
     const response = NextResponse.json({
       success: true,
@@ -155,7 +127,6 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         email: user.email,
         emailSent,
-        verificationEmailSent,
       }
     });
 
