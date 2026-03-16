@@ -21,6 +21,9 @@ const BULK_CHUNK_SIZE = 100;
 /** Default monthly limit for users without a subscription row (free tier). */
 const DEFAULT_FREE_MONTHLY_LIMIT = 5;
 
+/** Alert admin when a user has fewer unseen quotes than this threshold. */
+const LOW_QUOTE_THRESHOLD = 5;
+
 /**
  * Check if a user can send another email based on their Subscription row.
  * Falls back to DEFAULT_FREE_MONTHLY_LIMIT if no row exists.
@@ -58,6 +61,86 @@ async function incrementUsage(userId: string): Promise<void> {
       messagesUsed: { increment: 1 },
     },
   });
+}
+
+/**
+ * Count how many quotes from the bank have NOT yet been sent to this user.
+ */
+async function getAvailableQuoteCount(userId: string, allQuoteIds: string[]): Promise<number> {
+  const sentQuotes = await prisma.sentMessage.findMany({
+    where: { userId, status: "sent" },
+    select: { quoteId: true },
+    distinct: ["quoteId"],
+  });
+  const sentIds = new Set(sentQuotes.map((m) => m.quoteId));
+  return allQuoteIds.filter((id) => !sentIds.has(id)).length;
+}
+
+/**
+ * Send a low-quotes alert email to the admin (HOPEANA_REPLY_TO_EMAIL).
+ */
+async function sendLowQuotesAlert(
+  autosend: InstanceType<typeof Autosend>,
+  userId: string,
+  userEmail: string,
+  remainingCount: number,
+): Promise<void> {
+  const adminEmail = process.env.HOPEANA_REPLY_TO_EMAIL || "";
+  if (!adminEmail) {
+    logger.warn("HOPEANA_REPLY_TO_EMAIL not set, cannot send low-quotes alert");
+    return;
+  }
+
+  try {
+    await autosend.emails.send({
+      from: {
+        email: process.env.QUOTE_FROM_EMAIL || process.env.WELCOME_FROM_EMAIL || "",
+        name: "Hopeana System",
+      },
+      to: { email: adminEmail },
+      subject: `[Hopeana Alert] Low quotes for user ${userId}`,
+      html: `<p>Quotes for user <strong>${userId}</strong> (email: <strong>${userEmail}</strong>) are about to end. Please add new quotes to the Quotes bank.</p><p>Remaining unseen quotes: <strong>${remainingCount}</strong></p>`,
+    });
+    logger.info("Low-quotes alert sent", { userId, userEmail, remainingCount });
+  } catch (err) {
+    logger.error("Failed to send low-quotes alert", {
+      userId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Send a zero-quotes warning email to the admin (HOPEANA_REPLY_TO_EMAIL).
+ */
+async function sendZeroQuotesAlert(
+  autosend: InstanceType<typeof Autosend>,
+  userId: string,
+  userEmail: string,
+): Promise<void> {
+  const adminEmail = process.env.HOPEANA_REPLY_TO_EMAIL || "";
+  if (!adminEmail) {
+    logger.warn("HOPEANA_REPLY_TO_EMAIL not set, cannot send zero-quotes alert");
+    return;
+  }
+
+  try {
+    await autosend.emails.send({
+      from: {
+        email: process.env.QUOTE_FROM_EMAIL || process.env.WELCOME_FROM_EMAIL || "",
+        name: "Hopeana System",
+      },
+      to: { email: adminEmail },
+      subject: `[Hopeana Alert] No quotes remaining for user ${userId}`,
+      html: `<p>There are <strong>no more quotes</strong> to send for user <strong>${userId}</strong> (email: <strong>${userEmail}</strong>).</p><p>No email was sent to this user. Please add new quotes to the Quotes bank immediately.</p>`,
+    });
+    logger.info("Zero-quotes alert sent", { userId, userEmail });
+  } catch (err) {
+    logger.error("Failed to send zero-quotes alert", {
+      userId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 interface SendResult {
@@ -147,6 +230,9 @@ export async function sendDueEmails(): Promise<SendResult> {
 
   // 6. Prepare recipients (pick a unique quote per user)
   const prepared: { schedule: typeof batch[number]; quote: { id: string; content: string; author: string | null }; recipient: BulkRecipient }[] = [];
+  const allQuoteIds = quotes.map((q) => q.id);
+  // Track users already alerted this invocation to avoid duplicate alert emails
+  const alertedUsers = new Set<string>();
 
   for (const schedule of batch) {
     // Enforce monthly cap per user (Pro=30 via webhook reset, Free=5 default)
@@ -156,7 +242,27 @@ export async function sendDueEmails(): Promise<SendResult> {
       continue;
     }
 
-    const quote = await pickQuote(schedule.userId, quotes.map((q) => q.id));
+    // Check how many unseen quotes remain for this user
+    const availableCount = await getAvailableQuoteCount(schedule.userId, allQuoteIds);
+
+    if (availableCount === 0) {
+      // No quotes left — skip user and alert admin
+      if (!alertedUsers.has(schedule.userId)) {
+        alertedUsers.add(schedule.userId);
+        await sendZeroQuotesAlert(autosend, schedule.userId, schedule.user.email);
+      }
+      logger.warn("No unseen quotes remaining for user, skipping", { userId: schedule.userId });
+      result.skipped++;
+      continue;
+    }
+
+    if (availableCount < LOW_QUOTE_THRESHOLD && !alertedUsers.has(schedule.userId)) {
+      // Low quotes — alert admin but still send the quote
+      alertedUsers.add(schedule.userId);
+      await sendLowQuotesAlert(autosend, schedule.userId, schedule.user.email, availableCount);
+    }
+
+    const quote = await pickQuote(schedule.userId, allQuoteIds);
 
     if (!quote) {
       logger.warn("No unsent quotes available for user", { userId: schedule.userId });
