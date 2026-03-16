@@ -1,4 +1,4 @@
-import { prisma, type Schedule } from "db";
+import { prisma, Prisma, type Schedule } from "db";
 import { Autosend, type BulkSendEmailOptions, type BulkRecipient } from "autosendjs";
 import { isScheduleDue, isInPreferredWindow } from "./is-schedule-due";
 import { createLogger } from "utils";
@@ -25,22 +25,108 @@ const DEFAULT_FREE_MONTHLY_LIMIT = 5;
 const LOW_QUOTE_THRESHOLD = 5;
 
 /**
- * Check if a user can send another email based on their Subscription row.
- * Falls back to DEFAULT_FREE_MONTHLY_LIMIT if no row exists.
+ * Batch-check which users can send another email based on their Subscription rows.
+ * Single query for all users instead of one query per user.
  */
-async function canSendAnotherEmail(userId: string): Promise<boolean> {
-  const sub = await prisma.subscription.findUnique({ where: { userId } });
-  if (!sub) {
-    // No subscription row yet → treat as free tier starting at 0/5
-    return true;
+async function batchCanSendAnotherEmail(userIds: string[]): Promise<Set<string>> {
+  const unique = [...new Set(userIds)];
+  if (unique.length === 0) return new Set();
+
+  const subs = await prisma.subscription.findMany({
+    where: { userId: { in: unique } },
+  });
+
+  const subMap = new Map(subs.map((s) => [s.userId, s]));
+  const allowed = new Set<string>();
+
+  for (const userId of unique) {
+    const sub = subMap.get(userId);
+    if (!sub) {
+      // No subscription row yet → treat as free tier starting at 0/5
+      allowed.add(userId);
+      continue;
+    }
+    const limit = sub.messageLimit ?? DEFAULT_FREE_MONTHLY_LIMIT;
+    const used = sub.messagesUsed ?? 0;
+    if (used < limit && sub.status !== "cancelled" && sub.status !== "failed" && sub.status !== "expired") {
+      allowed.add(userId);
+    } else {
+      logger.debug("Monthly cap reached, skipping user", { userId, used, limit, status: sub.status });
+    }
   }
-  const limit = sub.messageLimit ?? DEFAULT_FREE_MONTHLY_LIMIT;
-  const used = sub.messagesUsed ?? 0;
-  const allowed = used < limit && sub.status !== "cancelled" && sub.status !== "failed" && sub.status !== "expired";
-  if (!allowed) {
-    logger.debug("Monthly cap reached, skipping user", { userId, used, limit, status: sub.status });
-  }
+
   return allowed;
+}
+
+/**
+ * Batch-get unseen quote counts for multiple users in a single SQL query.
+ * Computes: totalActiveQuotes - COUNT(DISTINCT sentQuoteIds) per user.
+ */
+async function batchGetUnseenQuoteCounts(
+  userIds: string[],
+  totalActiveQuotes: number,
+): Promise<Map<string, number>> {
+  const unique = [...new Set(userIds)];
+  if (unique.length === 0) return new Map();
+
+  const sentCounts = await prisma.$queryRaw<Array<{ userId: string; sentCount: bigint }>>`
+    SELECT "userId", COUNT(DISTINCT "quoteId") as "sentCount"
+    FROM "SentMessage"
+    WHERE "userId" IN (${Prisma.join(unique)}) AND status = 'sent'
+    GROUP BY "userId"
+  `;
+
+  const sentMap = new Map(sentCounts.map((r) => [r.userId, Number(r.sentCount)]));
+  const result = new Map<string, number>();
+
+  for (const userId of unique) {
+    const sent = sentMap.get(userId) ?? 0;
+    result.set(userId, Math.max(0, totalActiveQuotes - sent));
+  }
+
+  return result;
+}
+
+/**
+ * Pick a random unseen quote for a user directly from the database.
+ * Uses NOT EXISTS + ORDER BY RANDOM() LIMIT 1 so the DB handles all
+ * filtering and randomization — no quotes are loaded into app memory.
+ *
+ * @param excludeIds - Additional quote IDs to exclude (prevents same-invocation
+ *                     duplicates when a user has multiple schedules due)
+ */
+async function pickUnseenQuote(
+  userId: string,
+  excludeIds: string[],
+): Promise<{ id: string; content: string; author: string | null } | null> {
+  type QuoteRow = { id: string; content: string; author: string | null };
+
+  const rows = excludeIds.length > 0
+    ? await prisma.$queryRaw<QuoteRow[]>`
+        SELECT q.id, q.content, q.author
+        FROM "QuotesBank" q
+        WHERE q."isActive" = true
+          AND NOT EXISTS (
+            SELECT 1 FROM "SentMessage" sm
+            WHERE sm."userId" = ${userId} AND sm.status = 'sent' AND sm."quoteId" = q.id
+          )
+          AND q.id NOT IN (${Prisma.join(excludeIds)})
+        ORDER BY RANDOM()
+        LIMIT 1
+      `
+    : await prisma.$queryRaw<QuoteRow[]>`
+        SELECT q.id, q.content, q.author
+        FROM "QuotesBank" q
+        WHERE q."isActive" = true
+          AND NOT EXISTS (
+            SELECT 1 FROM "SentMessage" sm
+            WHERE sm."userId" = ${userId} AND sm.status = 'sent' AND sm."quoteId" = q.id
+          )
+        ORDER BY RANDOM()
+        LIMIT 1
+      `;
+
+  return rows[0] ?? null;
 }
 
 /**
@@ -61,19 +147,6 @@ async function incrementUsage(userId: string): Promise<void> {
       messagesUsed: { increment: 1 },
     },
   });
-}
-
-/**
- * Return the IDs of quotes from the bank that have NOT yet been sent to this user.
- */
-async function getUnseenQuoteIds(userId: string, allQuoteIds: string[]): Promise<string[]> {
-  const sentQuotes = await prisma.sentMessage.findMany({
-    where: { userId, status: "sent" },
-    select: { quoteId: true },
-    distinct: ["quoteId"],
-  });
-  const sentIds = new Set(sentQuotes.map((m) => m.quoteId));
-  return allQuoteIds.filter((id) => !sentIds.has(id));
 }
 
 /**
@@ -183,12 +256,10 @@ export async function sendDueEmails(): Promise<SendResult> {
     },
   });
 
-  // 2. Get available quotes
-  const quotes = await prisma.quotesBank.findMany({
-    where: { isActive: true },
-  });
+  // 2. Count active quotes (single COUNT — no data loaded into memory)
+  const totalActiveQuotes = await prisma.quotesBank.count({ where: { isActive: true } });
 
-  if (quotes.length === 0) {
+  if (totalActiveQuotes === 0) {
     logger.error("No active quotes found in QuotesBank");
     result.errors.push("No active quotes found in QuotesBank");
     return result;
@@ -208,7 +279,7 @@ export async function sendDueEmails(): Promise<SendResult> {
     total: schedules.length,
     due: dueSchedules.length,
     skipped: result.skipped,
-    quotes: quotes.length,
+    totalActiveQuotes,
   });
 
   // 4. Shuffle for fairness, then stable-sort so in-window emails
@@ -228,25 +299,28 @@ export async function sendDueEmails(): Promise<SendResult> {
 
   logger.info("Batch selected", { batchSize, remaining: result.remaining });
 
-  // 6. Prepare recipients (pick a unique quote per user)
+  // 6. Batch pre-checks: subscription caps and unseen quote counts (2 queries total)
+  const batchUserIds = [...new Set(batch.map((s) => s.userId))];
+  const [allowedUsers, unseenCounts] = await Promise.all([
+    batchCanSendAnotherEmail(batchUserIds),
+    batchGetUnseenQuoteCounts(batchUserIds, totalActiveQuotes),
+  ]);
+
+  // 7. Pick quotes and prepare recipients
   const prepared: { schedule: typeof batch[number]; quote: { id: string; content: string; author: string | null }; recipient: BulkRecipient }[] = [];
-  const allQuoteIds = quotes.map((q) => q.id);
-  // Track users already alerted this invocation to avoid duplicate alert emails
   const alertedUsers = new Set<string>();
+  // Track quotes picked this invocation per user to prevent same-run duplicates
+  const pickedQuotesPerUser = new Map<string, string[]>();
 
   for (const schedule of batch) {
-    // Enforce monthly cap per user (Pro=30 via webhook reset, Free=5 default)
-    const allowed = await canSendAnotherEmail(schedule.userId);
-    if (!allowed) {
+    if (!allowedUsers.has(schedule.userId)) {
       result.skipped++;
       continue;
     }
 
-    // Get unseen quotes for this user (filtered via SentMessage table)
-    const unseenIds = await getUnseenQuoteIds(schedule.userId, allQuoteIds);
+    const unseenCount = unseenCounts.get(schedule.userId) ?? totalActiveQuotes;
 
-    if (unseenIds.length === 0) {
-      // No quotes left — skip user and alert admin
+    if (unseenCount === 0) {
       if (!alertedUsers.has(schedule.userId)) {
         alertedUsers.add(schedule.userId);
         await sendZeroQuotesAlert(autosend, schedule.userId, schedule.user.email);
@@ -256,13 +330,13 @@ export async function sendDueEmails(): Promise<SendResult> {
       continue;
     }
 
-    if (unseenIds.length < LOW_QUOTE_THRESHOLD && !alertedUsers.has(schedule.userId)) {
-      // Low quotes — alert admin but still send the quote
+    if (unseenCount <= LOW_QUOTE_THRESHOLD && !alertedUsers.has(schedule.userId)) {
       alertedUsers.add(schedule.userId);
-      await sendLowQuotesAlert(autosend, schedule.userId, schedule.user.email, unseenIds.length);
+      await sendLowQuotesAlert(autosend, schedule.userId, schedule.user.email, unseenCount);
     }
 
-    const quote = await pickQuote(unseenIds);
+    const alreadyPicked = pickedQuotesPerUser.get(schedule.userId) ?? [];
+    const quote = await pickUnseenQuote(schedule.userId, alreadyPicked);
 
     if (!quote) {
       logger.warn("No unsent quotes available for user", { userId: schedule.userId });
@@ -270,6 +344,12 @@ export async function sendDueEmails(): Promise<SendResult> {
       result.failed++;
       continue;
     }
+
+    // Track picked quote to prevent same-invocation duplicates for this user
+    if (!pickedQuotesPerUser.has(schedule.userId)) {
+      pickedQuotesPerUser.set(schedule.userId, []);
+    }
+    pickedQuotesPerUser.get(schedule.userId)!.push(quote.id);
 
     prepared.push({
       schedule,
@@ -287,7 +367,7 @@ export async function sendDueEmails(): Promise<SendResult> {
     });
   }
 
-  // 7. Send in bulk chunks of 100
+  // 8. Send in bulk chunks of 100
   const chunks = chunkArray(prepared, BULK_CHUNK_SIZE);
 
   for (const chunk of chunks) {
@@ -398,17 +478,6 @@ function calculateBatchSize(dueCount: number): number {
   const slotsInWindow = (MIN_WINDOW_HOURS * 60) / CRON_INTERVAL_MIN;
   const spread = Math.ceil(dueCount / slotsInWindow);
   return Math.min(spread, MAX_PER_INVOCATION, dueCount);
-}
-
-/**
- * Pick a random quote from the provided unseen quote IDs.
- * Callers must filter out already-sent quotes before calling this function.
- */
-async function pickQuote(unseenQuoteIds: string[]) {
-  if (unseenQuoteIds.length === 0) return null;
-
-  const randomId = unseenQuoteIds[Math.floor(Math.random() * unseenQuoteIds.length)];
-  return prisma.quotesBank.findUnique({ where: { id: randomId } });
 }
 
 /** Fisher-Yates shuffle — mutates the array in place. */

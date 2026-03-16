@@ -178,6 +178,7 @@ model SentMessage {
   @@index([userId])
   @@index([scheduleId])
   @@index([sentAt])
+  @@index([userId, status, quoteId]) // covers NOT EXISTS + COUNT(DISTINCT quoteId) for unseen-quote queries
 }
 
 // Subscription model - tracks user plan and message usage
