@@ -64,16 +64,16 @@ async function incrementUsage(userId: string): Promise<void> {
 }
 
 /**
- * Count how many quotes from the bank have NOT yet been sent to this user.
+ * Return the IDs of quotes from the bank that have NOT yet been sent to this user.
  */
-async function getAvailableQuoteCount(userId: string, allQuoteIds: string[]): Promise<number> {
+async function getUnseenQuoteIds(userId: string, allQuoteIds: string[]): Promise<string[]> {
   const sentQuotes = await prisma.sentMessage.findMany({
     where: { userId, status: "sent" },
     select: { quoteId: true },
     distinct: ["quoteId"],
   });
   const sentIds = new Set(sentQuotes.map((m) => m.quoteId));
-  return allQuoteIds.filter((id) => !sentIds.has(id)).length;
+  return allQuoteIds.filter((id) => !sentIds.has(id));
 }
 
 /**
@@ -242,10 +242,10 @@ export async function sendDueEmails(): Promise<SendResult> {
       continue;
     }
 
-    // Check how many unseen quotes remain for this user
-    const availableCount = await getAvailableQuoteCount(schedule.userId, allQuoteIds);
+    // Get unseen quotes for this user (filtered via SentMessage table)
+    const unseenIds = await getUnseenQuoteIds(schedule.userId, allQuoteIds);
 
-    if (availableCount === 0) {
+    if (unseenIds.length === 0) {
       // No quotes left — skip user and alert admin
       if (!alertedUsers.has(schedule.userId)) {
         alertedUsers.add(schedule.userId);
@@ -256,13 +256,13 @@ export async function sendDueEmails(): Promise<SendResult> {
       continue;
     }
 
-    if (availableCount < LOW_QUOTE_THRESHOLD && !alertedUsers.has(schedule.userId)) {
+    if (unseenIds.length < LOW_QUOTE_THRESHOLD && !alertedUsers.has(schedule.userId)) {
       // Low quotes — alert admin but still send the quote
       alertedUsers.add(schedule.userId);
-      await sendLowQuotesAlert(autosend, schedule.userId, schedule.user.email, availableCount);
+      await sendLowQuotesAlert(autosend, schedule.userId, schedule.user.email, unseenIds.length);
     }
 
-    const quote = await pickQuote(schedule.userId, allQuoteIds);
+    const quote = await pickQuote(unseenIds);
 
     if (!quote) {
       logger.warn("No unsent quotes available for user", { userId: schedule.userId });
