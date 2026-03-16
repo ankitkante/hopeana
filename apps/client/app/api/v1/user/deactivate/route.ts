@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "db";
 import { getUserFromRequest } from "@/lib/get-user-from-request";
-import { AUTH_COOKIE_NAME } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, authCookieOptions } from "@/lib/auth";
 import { createLogger } from "utils";
 
 const logger = createLogger('api:user:deactivate');
@@ -13,11 +13,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Deactivate user and all their schedules in a transaction
+    // Deactivate user and all their schedules; increment tokenVersion to invalidate JWTs
     await prisma.$transaction([
       prisma.user.update({
         where: { id: auth.userId },
-        data: { isActive: false },
+        data: { isActive: false, tokenVersion: { increment: 1 } },
       }),
       prisma.schedule.updateMany({
         where: { userId: auth.userId },
@@ -27,13 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Clear auth cookie
     const response = NextResponse.json({ success: true });
-    response.cookies.set(AUTH_COOKIE_NAME, "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0,
-    });
+    response.cookies.set(AUTH_COOKIE_NAME, "", authCookieOptions(0));
 
     return response;
   } catch (error) {

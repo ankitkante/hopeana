@@ -194,7 +194,8 @@ Package: `posthog-js` (client-side). Provider and page-view tracker live in `app
 - **User identification** — `posthog.identify(userId, { email, firstName, plan })` is called in `app/dashboard/page.tsx` after dashboard data loads, linking anonymous events to the user.
 - **`posthog.reset()`** is called on logout (`AvatarDropdown`) to clear identity for the next session.
 - Analytics only fires when `NEXT_PUBLIC_POSTHOG_KEY` is set — leaving it unset silences all tracking. Set it only in the production Netlify site; leave it unset in staging and local.
-- Env vars: `NEXT_PUBLIC_POSTHOG_KEY` (PostHog project key — presence enables analytics), `NEXT_PUBLIC_POSTHOG_HOST` (defaults to `https://us.i.posthog.com`).
+- Env vars: `NEXT_PUBLIC_POSTHOG_KEY` (PostHog project key — presence enables analytics), `NEXT_PUBLIC_POSTHOG_HOST` (PostHog UI host for toolbar, defaults to `https://us.posthog.com`).
+- Reverse proxy: events are routed through `/hpa/*` → `us.i.posthog.com` via Netlify redirects in `netlify.toml` (bypasses ad blockers). `api_host: "/hpa"` in `PostHogProvider`. Path is app-specific to avoid ad blocker filter lists.
 - When adding new user actions, use `usePostHog()` from `posthog-js/react` and call `posthog.capture('event_name', { ...props })`.
 
 ### Event Taxonomy
@@ -239,4 +240,4 @@ Package: `posthog-js` (client-side). Provider and page-view tracker live in `app
 - `DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (server-only, preferred by checkout route)
 - `NEXT_PUBLIC_DODO_PRO_PRODUCT_ID` - Dodo product ID for the Pro plan (public — safe to expose, product IDs are public identifiers; used as client-side fallback)
 - `NEXT_PUBLIC_POSTHOG_KEY` - PostHog project API key — set only in production to activate analytics (unset in local/staging)
-- `NEXT_PUBLIC_POSTHOG_HOST` - PostHog ingestion host (optional, defaults to `https://us.i.posthog.com`)
+- `NEXT_PUBLIC_POSTHOG_HOST` - PostHog UI host for toolbar (optional, defaults to `https://us.posthog.com`)

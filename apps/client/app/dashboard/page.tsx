@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePostHog } from "posthog-js/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Icon from "@mdi/react";
 import {
@@ -10,6 +11,8 @@ import {
   mdiSend,
   mdiCheckCircleOutline,
   mdiPlus,
+  mdiEmailAlertOutline,
+  mdiCalendarPlusOutline,
 } from "@mdi/js";
 import DashboardHeader from "./components/DashboardHeader";
 import StatCard from "./components/StatCard";
@@ -24,6 +27,9 @@ interface UserData {
   firstName: string | null;
   lastName: string | null;
   email: string;
+  hasPassword: boolean;
+  emailVerifiedAt: string | null;
+  createdAt: string;
 }
 
 interface SubscriptionData {
@@ -51,6 +57,7 @@ interface MessageStats {
 
 export default function DashboardPage() {
   const posthog = usePostHog();
+  const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [schedules, setSchedules] = useState<SchedulesData | null>(null);
@@ -77,14 +84,32 @@ export default function DashboardPage() {
           msgRes.json(),
         ]);
 
-        setUser(userData.data);
+        const u: UserData = userData.data;
+
+        // Gate: password not set → redirect to set-password interstitial
+        if (!u.hasPassword) {
+          router.replace("/set-password");
+          return;
+        }
+
+        // Gate: email unverified for > 7 days → hard block
+        if (!u.emailVerifiedAt) {
+          const daysSinceCreation =
+            (Date.now() - new Date(u.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+          if (daysSinceCreation > 7) {
+            router.replace("/verify-email-required");
+            return;
+          }
+        }
+
+        setUser(u);
         setSubscription(subData.data);
         setSchedules(schedData.data);
         setMessageStats(msgData.data);
 
-        posthog.identify(userData.data.id, {
-          email: userData.data.email,
-          firstName: userData.data.firstName,
+        posthog.identify(u.id, {
+          email: u.email,
+          firstName: u.firstName,
           plan: subData.data?.plan,
         });
       } catch (err) {
@@ -95,7 +120,7 @@ export default function DashboardPage() {
     }
 
     fetchDashboardData();
-  }, [posthog]);
+  }, [posthog, router]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -119,9 +144,13 @@ export default function DashboardPage() {
 
   const isPro = subscription.plan === "pro";
 
+  const showVerificationBanner = !user.emailVerifiedAt;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <DashboardHeader firstName={user.firstName} plan={subscription.plan} />
+
+      {showVerificationBanner && <EmailVerificationBanner email={user.email} />}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isPro ? (
@@ -157,6 +186,8 @@ function FreeDashboard({
   schedules: SchedulesData | null;
   messageStats: MessageStats | null;
 }) {
+  const hasNoSchedules = (schedules?.count ?? 0) === 0;
+
   return (
     <>
       {/* Header row */}
@@ -174,42 +205,46 @@ function FreeDashboard({
       </div>
       <p className="text-gray-500 dark:text-gray-400 mb-8">Here is your scheduling overview.</p>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-        <StatCard
-          label="Messages Remaining"
-          value={subscription.messagesRemaining}
-          icon={<Icon path={mdiLightningBolt} size={1} />}
-          progressBar={{
-            current: subscription.messagesRemaining,
-            max: subscription.messageLimit,
-          }}
-        />
-        <StatCard
-          label="Scheduled Posts"
-          value={schedules?.activeCount ?? 0}
-          icon={<Icon path={mdiCalendarClock} size={1} />}
-        />
-        <StatCard
-          label="Total Sent"
-          value={messageStats?.totalSent ?? 0}
-          icon={<Icon path={mdiSend} size={1} />}
-        />
-      </div>
+      {hasNoSchedules ? (
+        <NoSchedulesCTA />
+      ) : (
+        <>
+          {/* Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+            <StatCard
+              label="Messages Remaining"
+              value={subscription.messagesRemaining}
+              icon={<Icon path={mdiLightningBolt} size={1} />}
+              progressBar={{
+                current: subscription.messagesRemaining,
+                max: subscription.messageLimit,
+              }}
+            />
+            <StatCard
+              label="Scheduled Posts"
+              value={schedules?.activeCount ?? 0}
+              icon={<Icon path={mdiCalendarClock} size={1} />}
+            />
+            <StatCard
+              label="Total Sent"
+              value={messageStats?.totalSent ?? 0}
+              icon={<Icon path={mdiSend} size={1} />}
+            />
+          </div>
 
-      {/* Bottom section: Quote + Upgrade */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left side - Sent Messages */}
-        <div className="lg:col-span-5">
-          <SentMessagesTable />
-        </div>
-
-        {/* Right side - PAYMENT_DISABLED
-        <div className="lg:col-span-2 space-y-6">
-          <UpgradeCard />
-        </div>
-        */}
-      </div>
+          {/* Bottom section */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="lg:col-span-5">
+              <SentMessagesTable />
+            </div>
+            {/* PAYMENT_DISABLED
+            <div className="lg:col-span-2 space-y-6">
+              <UpgradeCard />
+            </div>
+            */}
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -227,6 +262,8 @@ function ProDashboard({
   schedules: SchedulesData | null;
   messageStats: MessageStats | null;
 }) {
+  const hasNoSchedules = (schedules?.count ?? 0) === 0;
+
   return (
     <>
       {/* Header row */}
@@ -252,43 +289,117 @@ function ProDashboard({
         Here is your scheduling overview.
       </p>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-        <StatCard
-          label="Messages Remaining"
-          value={subscription.messagesRemaining}
-          icon={<Icon path={mdiLightningBolt} size={1} />}
-          progressBar={{
-            current: subscription.messagesRemaining,
-            max: subscription.messageLimit,
-          }}
-        />
-        <StatCard
-          label="Scheduled Posts"
-          value={schedules?.activeCount ?? 0}
-          icon={<Icon path={mdiCalendarClock} size={1} />}
-        />
-        <StatCard
-          label="Total Sent This Month"
-          value={messageStats?.sentThisMonth ?? 0}
-          icon={<Icon path={mdiSend} size={1} />}
-        />
-      </div>
+      {hasNoSchedules ? (
+        <NoSchedulesCTA />
+      ) : (
+        <>
+          {/* Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+            <StatCard
+              label="Messages Remaining"
+              value={subscription.messagesRemaining}
+              icon={<Icon path={mdiLightningBolt} size={1} />}
+              progressBar={{
+                current: subscription.messagesRemaining,
+                max: subscription.messageLimit,
+              }}
+            />
+            <StatCard
+              label="Scheduled Posts"
+              value={schedules?.activeCount ?? 0}
+              icon={<Icon path={mdiCalendarClock} size={1} />}
+            />
+            <StatCard
+              label="Total Sent This Month"
+              value={messageStats?.sentThisMonth ?? 0}
+              icon={<Icon path={mdiSend} size={1} />}
+            />
+          </div>
 
-      {/* Bottom section */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left side - Sent Messages */}
-        <div className="lg:col-span-5">
-          <SentMessagesTable />
-        </div>
-
-        {/* Right side - PAYMENT_DISABLED
-        <div className="lg:col-span-2 space-y-6">
-          <CurrentPlanCard billingDate={subscription.billingDate} />
-        </div>
-        */}
-      </div>
+          {/* Bottom section */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="lg:col-span-5">
+              <SentMessagesTable />
+            </div>
+            {/* PAYMENT_DISABLED
+            <div className="lg:col-span-2 space-y-6">
+              <CurrentPlanCard billingDate={subscription.billingDate} />
+            </div>
+            */}
+          </div>
+        </>
+      )}
     </>
+  );
+}
+
+/* ─── Email Verification Banner ─── */
+
+function EmailVerificationBanner({ email }: { email: string }) {
+  const posthog = usePostHog();
+  const [isSending, setIsSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleResend = async () => {
+    setIsSending(true);
+    try {
+      await fetch("/api/v1/auth/resend-verification", { method: "POST" });
+      posthog.capture("email_verification_resent", { source: "dashboard_banner" });
+      setSent(true);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+        <Icon path={mdiEmailAlertOutline} size={0.8} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
+        <p className="text-sm text-amber-800 dark:text-amber-200 flex-1">
+          Please verify your email address.{" "}
+          <span className="font-medium">{email}</span> — check your inbox for the link.
+        </p>
+        {sent ? (
+          <span className="text-sm font-medium text-amber-700 dark:text-amber-300 shrink-0">
+            Email sent!
+          </span>
+        ) : (
+          <button
+            onClick={handleResend}
+            disabled={isSending}
+            className="text-sm font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 transition shrink-0 disabled:opacity-50"
+          >
+            {isSending ? "Sending…" : "Resend email"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── No Schedules CTA ─── */
+
+function NoSchedulesCTA() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4">
+      <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/20">
+        <Icon path={mdiCalendarPlusOutline} size={2} className="text-primary" />
+      </div>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        Set up your first schedule
+      </h2>
+      <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 text-center max-w-sm">
+        Choose when and how often you want to receive motivational quotes, and we&apos;ll
+        deliver them straight to your inbox.
+      </p>
+      <Link
+        href="/dashboard/settings/schedules/new"
+        className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-green-600 text-white font-semibold rounded-lg transition"
+      >
+        <Icon path={mdiPlus} size={0.8} />
+        Create Schedule
+      </Link>
+    </div>
   );
 }
 

@@ -14,14 +14,33 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: auth.userId },
-      select: { id: true, firstName: true, lastName: true, email: true, createdAt: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        createdAt: true,
+        emailVerifiedAt: true,
+        passwordHash: true,
+      },
     });
 
     if (!user) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: user });
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        createdAt: user.createdAt,
+        emailVerifiedAt: user.emailVerifiedAt,
+        hasPassword: user.passwordHash !== null,
+      },
+    });
   } catch (error) {
     logger.error("GET /api/user error", { error });
     return NextResponse.json({ success: false, error: "Failed to fetch user" }, { status: 500 });

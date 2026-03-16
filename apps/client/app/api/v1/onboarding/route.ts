@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
 import { Autosend, type SendEmailOptions } from 'autosendjs';
-import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { signToken, AUTH_COOKIE_NAME, authCookieOptions } from "@/lib/auth";
+import { generateToken, sendVerificationEmail } from "@/lib/auth-tokens";
 import { createLogger } from "utils";
 
 const logger = createLogger('api:onboarding');
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user and schedule atomically
-    const { user, schedule } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const { user, schedule, verificationToken } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const user: User = await tx.user.create({
         data: {
           email,
@@ -69,7 +70,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return { user, schedule, subscription };
+      // Create email verification token
+      const rawToken = generateToken();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      await tx.emailVerificationToken.create({
+        data: { userId: user.id, token: rawToken, expiresAt },
+      });
+
+      return { user, schedule, subscription, verificationToken: rawToken };
     });
 
     // Send welcome email
@@ -108,7 +116,10 @@ export async function POST(request: NextRequest) {
       emailSent = false;
     }
 
-    const token = await signToken({ userId: user.id, email: user.email });
+    // Send verification email (failure doesn't roll back account creation)
+    await sendVerificationEmail(user.email, user.firstName, verificationToken);
+
+    const token = await signToken({ userId: user.id, email: user.email, tokenVersion: user.tokenVersion });
 
     const response = NextResponse.json({
       success: true,
@@ -119,13 +130,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    response.cookies.set(AUTH_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    response.cookies.set(AUTH_COOKIE_NAME, token, authCookieOptions(60 * 60 * 24 * 7));
 
     return response;
   } catch (error) {
