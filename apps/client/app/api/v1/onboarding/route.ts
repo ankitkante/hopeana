@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, type User, type Schedule, Prisma } from "db";
 import { Autosend, type SendEmailOptions } from 'autosendjs';
 import { signToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { sendVerificationEmail } from "@/lib/auth-tokens";
 import { createLogger } from "utils";
 
 const logger = createLogger('api:onboarding');
@@ -108,6 +109,25 @@ export async function POST(request: NextRequest) {
       emailSent = false;
     }
 
+    // Send verification email
+    let verificationEmailSent = true;
+    try {
+      const verificationResult = await sendVerificationEmail({
+        email: user.email,
+        userId: user.id,
+        firstName: user.firstName,
+      });
+      if (verificationResult.success) {
+        logger.info("Verification email sent", { userId: user.id });
+      } else {
+        verificationEmailSent = false;
+        logger.error("Verification email send returned failure", { userId: user.id });
+      }
+    } catch (verificationError) {
+      logger.error("Failed to send verification email", { error: verificationError });
+      verificationEmailSent = false;
+    }
+
     const token = await signToken({ userId: user.id, email: user.email });
 
     const response = NextResponse.json({
@@ -116,6 +136,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         email: user.email,
         emailSent,
+        verificationEmailSent,
       }
     });
 
