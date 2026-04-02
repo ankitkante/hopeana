@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { usePostHog } from "posthog-js/react";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 const schema = yup.object({
     password: yup.string().min(8, "Password must be at least 8 characters").required("Password is required"),
@@ -158,7 +159,12 @@ export default function SetPasswordPage() {
                                     disabled={isSubmitting}
                                     className="w-full py-3 px-4 rounded-lg bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {isSubmitting ? "Saving..." : "Set Password"}
+                                    {isSubmitting ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <ButtonSpinner />
+                                            Saving...
+                                        </span>
+                                    ) : "Set Password"}
                                 </button>
                             </form>
 

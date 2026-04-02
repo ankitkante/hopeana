@@ -17,6 +17,7 @@ import {
 } from "@mdi/js";
 import Link from "next/link";
 import Toast from "../components/Toast";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 interface Schedule {
   id: string;
@@ -70,6 +71,7 @@ export default function SchedulesPage() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
     setToast({ message, type });
@@ -94,6 +96,7 @@ export default function SchedulesPage() {
 
   async function handleToggle(scheduleId: string, currentActive: boolean) {
     const newActive = !currentActive;
+    setTogglingId(scheduleId);
     // Optimistic update
     setSchedules((prev) =>
       prev.map((s) => (s.id === scheduleId ? { ...s, isActive: newActive } : s))
@@ -113,6 +116,8 @@ export default function SchedulesPage() {
         prev.map((s) => (s.id === scheduleId ? { ...s, isActive: currentActive } : s))
       );
       showToast("Failed to update schedule.", "error");
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -243,10 +248,15 @@ export default function SchedulesPage() {
               <div className="col-span-3 flex items-center justify-end gap-1">
                 <button
                   onClick={() => handleToggle(schedule.id, schedule.isActive)}
+                  disabled={togglingId === schedule.id}
                   title={schedule.isActive ? "Pause schedule" : "Activate schedule"}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition disabled:opacity-50"
                 >
-                  <Icon path={schedule.isActive ? mdiPause : mdiPlay} size={0.75} />
+                  {togglingId === schedule.id ? (
+                    <ButtonSpinner className="h-[18px] w-[18px]" />
+                  ) : (
+                    <Icon path={schedule.isActive ? mdiPause : mdiPlay} size={0.75} />
+                  )}
                 </button>
                 <Link
                   href={`/dashboard/settings/schedules/${schedule.id}/edit`}
@@ -297,7 +307,12 @@ export default function SchedulesPage() {
                 disabled={isDeleting}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50"
               >
-                {isDeleting ? "Deleting..." : "Delete"}
+                {isDeleting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <ButtonSpinner />
+                    Deleting...
+                  </span>
+                ) : "Delete"}
               </button>
             </div>
           </div>

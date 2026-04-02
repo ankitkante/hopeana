@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { usePostHog } from "posthog-js/react";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 const loginSchema = yup.object({
     email: yup
@@ -163,7 +164,12 @@ export default function LoginPage() {
                             disabled={isSubmitting}
                             className="w-full py-3 px-4 rounded-lg bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isSubmitting ? "Signing in..." : "Sign In"}
+                            {isSubmitting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <ButtonSpinner />
+                                    Signing in...
+                                </span>
+                            ) : "Sign In"}
                         </button>
                     </form>
 

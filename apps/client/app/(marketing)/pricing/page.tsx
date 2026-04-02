@@ -7,6 +7,7 @@ import { mdiCheck, mdiChevronUp, mdiChevronDown } from "@mdi/js";
 import Icon from "@mdi/react";
 import { useToast } from "@/components/Toast";
 import { redirectToCheckout } from "@/lib/checkout";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 interface FAQItem {
     question: string;
@@ -173,7 +174,12 @@ export default function PricingPage() {
                         onClick={handleCheckout}
                         disabled={checkoutLoading}
                     >
-                        {checkoutLoading ? "Redirecting..." : "Upgrade to Pro"}
+                        {checkoutLoading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <ButtonSpinner />
+                                Redirecting...
+                            </span>
+                        ) : "Upgrade to Pro"}
                     </button>
                 );
             case "pro":

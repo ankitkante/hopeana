@@ -21,6 +21,7 @@ import {
 import CardRadio from "@/components/CardRadio";
 import SectionCard from "@/components/SectionCard";
 import DayPicker from "@/components/DayPicker";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 /* ─── Data ─── */
 
@@ -283,7 +284,12 @@ export default function EditSchedulePage() {
           disabled={!isFormValid || submitting}
           className="px-6 py-2.5 text-sm font-semibold text-white bg-green-500 hover:bg-green-600 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {submitting ? "Saving..." : "Save Changes"}
+          {submitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <ButtonSpinner />
+              Saving...
+            </span>
+          ) : "Save Changes"}
         </button>
       </div>
     </div>

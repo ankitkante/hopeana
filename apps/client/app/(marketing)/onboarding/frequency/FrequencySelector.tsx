@@ -17,6 +17,7 @@ import { OnboardingContext } from "../onboarding-context";
 import CardRadio from "@/components/CardRadio";
 import SectionCard from "@/components/SectionCard";
 import DayPicker from "@/components/DayPicker";
+import ButtonSpinner from "@/components/ButtonSpinner";
 // PAYMENT_DISABLED
 // import { redirectToCheckout } from "@/lib/checkout";
 
@@ -260,7 +261,14 @@ export default function FrequencySelector() {
                     onClick={onCompleteSetup}
                     disabled={!isFormValid || submitting}
                 >
-                    <span className="truncate">{submitting ? 'Setting up...' : 'Complete Setup'}</span>
+                    {submitting ? (
+                        <span className="flex items-center justify-center gap-2">
+                            <ButtonSpinner />
+                            Setting up...
+                        </span>
+                    ) : (
+                        <span className="truncate">Complete Setup</span>
+                    )}
                 </button>
             </div>
 

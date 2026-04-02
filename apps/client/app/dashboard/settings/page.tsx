@@ -9,6 +9,7 @@ import * as yup from "yup";
 import Icon from "@mdi/react";
 import { mdiAlertOutline } from "@mdi/js";
 import DeactivateConfirmModal from "./components/DeactivateConfirmModal";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 const profileSchema = yup.object({
   firstName: yup.string().max(50, "Max 50 characters").default(""),
@@ -207,7 +208,12 @@ export default function PersonalInfoPage() {
               disabled={!isDirty || saving}
               className="px-5 py-2.5 text-sm font-semibold text-white bg-green-500 hover:bg-green-600 rounded-lg transition disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <ButtonSpinner />
+                  Saving...
+                </span>
+              ) : "Save Changes"}
             </button>
           </div>
         </form>
