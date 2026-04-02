@@ -2,6 +2,7 @@
 
 import Icon from "@mdi/react";
 import { mdiAlertCircleOutline } from "@mdi/js";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 interface DeactivateConfirmModalProps {
   onConfirm: () => void;
@@ -55,7 +56,12 @@ export default function DeactivateConfirmModal({
             disabled={isDeactivating}
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50"
           >
-            {isDeactivating ? "Deactivating..." : "Deactivate Account"}
+            {isDeactivating ? (
+              <span className="flex items-center justify-center gap-2">
+                <ButtonSpinner />
+                Deactivating...
+              </span>
+            ) : "Deactivate Account"}
           </button>
         </div>
       </div>

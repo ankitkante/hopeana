@@ -14,6 +14,7 @@ import {
   mdiEmailAlertOutline,
   mdiCalendarPlusOutline,
 } from "@mdi/js";
+import ButtonSpinner from "@/components/ButtonSpinner";
 import DashboardHeader from "./components/DashboardHeader";
 import StatCard from "./components/StatCard";
 // PAYMENT_DISABLED
@@ -369,7 +370,12 @@ function EmailVerificationBanner({ email }: { email: string }) {
             disabled={isSending}
             className="text-sm font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 transition shrink-0 disabled:opacity-50"
           >
-            {isSending ? "Sending…" : "Resend email"}
+            {isSending ? (
+              <span className="flex items-center gap-1.5">
+                <ButtonSpinner className="h-3.5 w-3.5" />
+                Sending…
+              </span>
+            ) : "Resend email"}
           </button>
         )}
       </div>

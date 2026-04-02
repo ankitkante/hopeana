@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { usePostHog } from "posthog-js/react";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 const signupSchema = yup.object({
     firstName: yup.string().max(50).required("First name is required"),
@@ -207,7 +208,12 @@ export default function SignUpPage() {
                             disabled={isSubmitting}
                             className="w-full py-3 px-4 rounded-lg bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isSubmitting ? "Creating account..." : "Create Account"}
+                            {isSubmitting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <ButtonSpinner />
+                                    Creating account...
+                                </span>
+                            ) : "Create Account"}
                         </button>
                     </form>
 

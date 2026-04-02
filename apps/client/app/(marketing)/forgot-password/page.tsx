@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { usePostHog } from "posthog-js/react";
+import ButtonSpinner from "@/components/ButtonSpinner";
 import Icon from "@mdi/react";
 import { mdiEmailCheckOutline } from "@mdi/js";
 
@@ -114,7 +115,12 @@ export default function ForgotPasswordPage() {
                                 disabled={isSubmitting}
                                 className="w-full py-3 px-4 rounded-lg bg-primary text-white font-semibold shadow-sm hover:bg-green-600 transition ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isSubmitting ? "Sending..." : "Send Reset Link"}
+                                {isSubmitting ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <ButtonSpinner />
+                                        Sending...
+                                    </span>
+                                ) : "Send Reset Link"}
                             </button>
                         </form>
                     )}

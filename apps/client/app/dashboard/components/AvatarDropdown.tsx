@@ -6,6 +6,7 @@ import Link from "next/link";
 import Icon from "@mdi/react";
 import { mdiAccount, mdiCogOutline, mdiLogout } from "@mdi/js";
 import { usePostHog } from "posthog-js/react";
+import ButtonSpinner from "@/components/ButtonSpinner";
 
 interface AvatarDropdownProps {
   firstName: string | null;
@@ -15,6 +16,7 @@ interface AvatarDropdownProps {
 export default function AvatarDropdown({ firstName, plan }: AvatarDropdownProps) {
   const posthog = usePostHog();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -29,6 +31,7 @@ export default function AvatarDropdown({ firstName, plan }: AvatarDropdownProps)
   }, []);
 
   async function handleLogout() {
+    setIsLoggingOut(true);
     posthog.capture("logout");
     posthog.reset();
     await fetch("/api/v1/auth/logout", { method: "POST" });
@@ -68,10 +71,15 @@ export default function AvatarDropdown({ firstName, plan }: AvatarDropdownProps)
           </Link>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+            disabled={isLoggingOut}
+            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50"
           >
-            <Icon path={mdiLogout} size={0.8} />
-            Log out
+            {isLoggingOut ? (
+              <ButtonSpinner className="h-[19px] w-[19px]" />
+            ) : (
+              <Icon path={mdiLogout} size={0.8} />
+            )}
+            {isLoggingOut ? "Logging out..." : "Log out"}
           </button>
         </div>
       )}
